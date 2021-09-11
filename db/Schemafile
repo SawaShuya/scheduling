@@ -1,0 +1,6 @@
+# -*- mode: ruby -*-
+# vi: set ft=ruby :
+
+Dir.glob(File.expand_path("../*.schema", __FILE__)) do |file|
+  require file
+end
