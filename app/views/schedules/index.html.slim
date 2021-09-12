@@ -32,7 +32,7 @@ h1
           td 
             = ordered_meal.ideal_served_time.strftime("%H:%M")
           td 
-            = ordered_meal.schedules.last.end_time.strftime("%H:%M")
+            = ordered_meal.schedules.first.end_time.strftime("%H:%M")
 
 .scheduling
   table

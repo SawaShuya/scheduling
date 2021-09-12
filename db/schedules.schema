@@ -4,6 +4,7 @@ create_table "schedules", force: :cascade do |t|
   t.integer :chef_id
   t.time :start_time
   t.time :end_time
+  t.boolean :is_free, default: true
   
   t.datetime :created_at
   t.datetime :updated_at

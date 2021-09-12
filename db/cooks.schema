@@ -6,6 +6,7 @@ create_table "cooks", force: :cascade do |t|
   t.integer :permutation
   t.integer :time
   t.integer :skill
+  t.boolean :is_free, default: false
   
   t.datetime :created_at
   t.datetime :updated_at
