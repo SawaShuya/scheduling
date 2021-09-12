@@ -1,0 +1,12 @@
+create_table "cooks", force: :cascade do |t|
+  t.integer :meal_id, null: false
+  t.integer :place_id, null: false
+
+  t.string :name
+  t.integer :permutation
+  t.integer :time
+  t.integer :skill
+  
+  t.datetime :created_at
+  t.datetime :updated_at
+end
