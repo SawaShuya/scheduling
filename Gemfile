@@ -65,3 +65,6 @@ gem 'ridgepole'
 gem 'warning'
 
 gem 'diff-lcs'
+
+gem 'slim'
+gem 'html2slim'

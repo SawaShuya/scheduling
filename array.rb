@@ -18,3 +18,6 @@
 
 {name: "", interval: , velocity_params: }
 [{name: "ゆったりめ", velocity_params: 1.2}, {name: "ノーマル", velocity_params: 1.0}, {name: "せかせか", velocity_params: 0.8}]
+
+{skill: }
+[{skill: 1}, {skill: 2}, {skill: 3}]
