@@ -15,7 +15,7 @@ namespace :customers do
         meals.each do |meal|
           order_meal = customer.ordered_meals.new(meal_id: meal.id, ideal_served_time: next_serve_time)
           order_meal.save
-          next_serve_time += (meal.eating_time + meal.interval) * customer.velocity_params * customer.style.velocity_params * 60
+          next_serve_time += (meal.eating_time + meal.interval) * customer.style.velocity_params * 60
         end
       end
     end

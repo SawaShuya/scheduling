@@ -10,6 +10,10 @@ namespace :scheduling do
         if num == 0
           start_time = ordered_meal.ideal_served_time - cook.time * 60
           end_time = ordered_meal.ideal_served_time
+        elsif cook.rear_cooks.present?
+          rear_cook_id = Relationship.find_by(ahead_id: cook.id).rear_id
+          end_time = ordered_meal.schedules.find_by(cook_id: rear_cook_id).start_time
+          start_time = ordered_meal.schedules.find_by(cook_id: rear_cook_id).start_time - cook.time * 60
         else
           start_time = @ajusted_start_time - cook.time * 60
           end_time = @ajusted_start_time
@@ -45,5 +49,12 @@ namespace :scheduling do
 
     return @chef, @end_time
   end
+
+
+  task 'ガントチャート'
+  task :gant => :environment do
+
+  end
+
 
 end

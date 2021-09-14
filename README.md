@@ -1,24 +1,17 @@
 # README
 
-This README would normally document whatever steps are necessary to get the
-application up and running.
+## 顧客の生成
+```
+$ rails customers:create
+```
 
-Things you may want to cover:
+## スケジューリング作成
+```
+$ rails scheduling:create
+```
 
-* Ruby version
+## 顧客データ削除
+```
+$ rails database:remove
+```
 
-* System dependencies
-
-* Configuration
-
-* Database creation
-
-* Database initialization
-
-* How to run the test suite
-
-* Services (job queues, cache servers, search engines, etc.)
-
-* Deployment instructions
-
-* ...

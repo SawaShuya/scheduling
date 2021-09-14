@@ -21,3 +21,9 @@
 
 {skill: }
 [{skill: 1}, {skill: 2}, {skill: 3}]
+
+{ahead_id: , rear_id:}
+[{ahead_id: 10, rear_id: 11}, {ahead_id: 9, rear_id: 11}]
+[{ahead_id: 15, rear_id: 19}, {ahead_id: 17, rear_id: 19}, {ahead_id: 18, rear_id: 19}]
+[{ahead_id: 13, rear_id: 16}]
+[{ahead_id: 20, rear_id: 23}, {ahead_id: 21, rear_id: 23}, {ahead_id: 22, rear_id: 23}]

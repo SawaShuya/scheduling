@@ -1,6 +1,8 @@
 h1
   | 出力
-
+.csv-buttun 
+  = link_to "create CSV", root_path(format: :csv)
+  
 .customers
   table 
     tr 
@@ -35,6 +37,7 @@ h1
             = ordered_meal.schedules.first.end_time.strftime("%H:%M")
 
 .scheduling
+  - @schedule_ary = []
   table
     tr 
       th
@@ -74,4 +77,9 @@ h1
             = schedule.start_time.strftime("%H:%M")
           td 
             = schedule.end_time.strftime("%H:%M")
+            / - @schedule_ary << [schedule.time_change_ary(@start_time)]
+
+        
+
+
       

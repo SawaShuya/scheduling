@@ -1,0 +1,7 @@
+create_table "relationships", force: :cascade do |t|
+  t.integer :ahead_id
+  t.integer :rear_id
+  
+  t.datetime :created_at
+  t.datetime :updated_at
+end
