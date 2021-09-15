@@ -1,5 +1,4 @@
 create_table "customers", force: :cascade do |t|
-  t.integer :genre_id
   t.integer :style_id
   t.time :reserved_time
   t.time :finish_time

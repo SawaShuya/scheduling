@@ -24,6 +24,7 @@ class SchedulesController < ApplicationController
       customers.each do |customer|
         values =[]
         customer.ordered_meals.each do |ordered_meal|
+          
           values.concat [ordered_meal.ideal_served_time.strftime("%H:%M"), ordered_meal.schedules.first.end_time.strftime("%H:%M")]
         end
 

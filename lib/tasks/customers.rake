@@ -1,7 +1,8 @@
 namespace :customers do
   desc "顧客の作成"
   task :create => :environment do
-    number = 5
+    Customer.all.destroy_all
+    number = 3
     velocity_range = 0.8..1.2
     meals = Meal.all
     open_time = Time.mktime(2020, 1, 1, 17, 0,0,6)
@@ -9,7 +10,7 @@ namespace :customers do
 
     number.times do |i|
       time = open_time + reserve_timing[rand(0..4)]*60
-      customer = Customer.new(genre_id: rand(1..3), style_id: rand(1..3), velocity_params: rand(velocity_range).round(1), reserved_time: time)
+      customer = Customer.new(style_id: rand(1..3), velocity_params: rand(velocity_range).round(1), reserved_time: time)
       next_serve_time = time + 5 * 60
       if customer.save!
         meals.each do |meal|
