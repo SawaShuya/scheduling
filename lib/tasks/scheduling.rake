@@ -64,6 +64,7 @@ namespace :scheduling do
     end
     # byebug
     while staging_cooks.length != 0 do
+      
       end_time = staging_cooks.max[0]
       cook = staging_cooks.max[1]
       ordered_meal_id = staging_cooks.max[2]
@@ -75,11 +76,19 @@ namespace :scheduling do
 
       Schedule.create!(chef_id: chef.id, cook_id: cook.id, ordered_meal_id: ordered_meal_id, start_time: @ajusted_start_time, end_time: @ajusted_end_time, is_free: cook.is_free)
       
-      p end_time, cook.id, ordered_meal_id
       next_cook = Cook.find_by(id: cook.id - 1)
       index = staging_cooks.each_with_index.max[1]
       if next_cook.present?
-        staging_cooks[index][0] = @ajusted_start_time
+        schedule = Schedule.last
+        if next_cook.rear_cooks.present?
+          rear_cook_schedule = Schedule.find_by(cook_id: next_cook.rear_cooks.first.id, ordered_meal_id: ordered_meal_id)
+          staging_cooks[index][0] = rear_cook_schedule.start_time
+        elsif cook.meal.id != next_cook.meal.id
+          ordered_meal = OrderedMeal.find_by(id: schedule.ordered_meal.id - 1)
+          staging_cooks[index][0] = [ordered_meal.ideal_served_time, @ajusted_start_time].min
+        else
+          staging_cooks[index][0] = @ajusted_start_time
+        end
         staging_cooks[index][1] = next_cook
         staging_cooks[index][2] -= 1 if cook.meal.id != next_cook.meal.id
       else
