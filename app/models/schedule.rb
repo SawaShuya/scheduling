@@ -9,4 +9,16 @@ class Schedule < ApplicationRecord
 
     return start_mark, end_mark
   end
+
+  def self.step_forword
+
+  end
+
+  def start_job(time)
+
+  end
+
+  def end_job(time)
+
+  end
 end

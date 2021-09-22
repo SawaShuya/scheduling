@@ -7,6 +7,7 @@ create_table "cooks", force: :cascade do |t|
   t.integer :time
   t.integer :skill
   t.boolean :is_free, default: false
+  t.boolean :is_last, null: false, default: false
   
   t.datetime :created_at
   t.datetime :updated_at
