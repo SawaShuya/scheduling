@@ -2,7 +2,7 @@ namespace :customers do
   desc "顧客の作成"
   task :create => :environment do
     Customer.all.destroy_all
-    number = 3
+    number = 5
     velocity_range = 0.8..1.2
     meals = Meal.all
     open_time = Time.mktime(2020, 1, 1, 17, 0,0,6)

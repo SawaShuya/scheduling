@@ -53,6 +53,7 @@ namespace :scheduling do
 
   task '予約スケジューリング 調理ばらし'
   task :create2 => :environment do
+
     Schedule.all.destroy_all
     customers= Customer.all
 
@@ -72,10 +73,11 @@ namespace :scheduling do
       start_time = end_time - cook.time * 60
 
       chef, @ajusted_end_time = search_chef(start_time, end_time, cook.skill, cook.is_free)
-      @ajusted_start_time = @ajusted_end_time - cook.time * chef.cook_speed * 60
+      @ajusted_start_time = @ajusted_end_time - (cook.time * chef.cook_speed).round * 60
 
       Schedule.create!(chef_id: chef.id, cook_id: cook.id, ordered_meal_id: ordered_meal_id, start_time: @ajusted_start_time, end_time: @ajusted_end_time, is_free: cook.is_free)
       
+
       next_cook = Cook.find_by(id: cook.id - 1)
       index = staging_cooks.each_with_index.max[1]
       if next_cook.present?
