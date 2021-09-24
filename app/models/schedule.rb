@@ -10,15 +10,27 @@ class Schedule < ApplicationRecord
     return start_mark, end_mark
   end
 
-  def self.step_forword
-
+  def self.every_process(time)
+    start_cook(time)
+    end_cook(time)
   end
 
-  def start_job(time)
-
+  def self.start_cook(time)
+    schedules = Schedule.where(start_time: time)
+    schedules.each do |schedule|
+      unless schedule.ordered_meal.is_started
+        schedule.ordered_meal.update(is_started: true)
+      end
+    end
   end
 
-  def end_job(time)
-
+  def self.end_cook(time)
+    schedules = Schedule.where(end_time: time)
+    schedules.each do |schedule|
+      if schedule.cook.is_last
+        schedule.ordered_meal.update(actual_served_time: time)
+      end
+    end
   end
+
 end

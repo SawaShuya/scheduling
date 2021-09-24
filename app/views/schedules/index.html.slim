@@ -1,12 +1,15 @@
+
 h1
   | 出力
+.start_active 
+  = link_to "start", active_path, method: :patch
 .csv-buttun 
-  = link_to "create CSV", root_path(format: :csv)
+  = link_to "create CSV", post_csv_path, method: :post
   
 .customers
   table 
     tr 
-      th 
+      th
         | id 
       th 
         | 予約時間

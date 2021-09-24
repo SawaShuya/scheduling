@@ -5,7 +5,7 @@ create_table "ordered_meals", force: :cascade do |t|
   t.time :ideal_served_time
   t.time :actual_served_time
 
-  t.boolean :status, null: false, default: true
+  t.boolean :is_started, null: false, default: true
   
   t.datetime :created_at
   t.datetime :updated_at
