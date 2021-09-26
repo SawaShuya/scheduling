@@ -5,6 +5,8 @@ create_table "schedules", force: :cascade do |t|
   t.time :start_time
   t.time :end_time
   t.boolean :is_free, default: true
+  t.boolean :is_rescheduled, default: true
+  t.time :reschedule_time
   
   t.datetime :created_at
   t.datetime :updated_at

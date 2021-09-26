@@ -5,6 +5,14 @@ h1
   = link_to "start", active_path, method: :patch
 .csv-buttun 
   = link_to "create CSV", post_csv_path, method: :post
+
+.objectives 
+  table 
+    tr 
+      td 
+        | 時間不満足度
+      td 
+        = @time_satisfaction
   
 .customers
   table 
@@ -21,7 +29,10 @@ h1
         th 
           = "#" + (i + 1).to_s + "理想"
         th 
-          = "#" + (i + 1).to_s + "予定"
+          - if OrderedMeal.finish_all?
+            = "#" + (i + 1).to_s + "提供"
+          - else
+            = "#" + (i + 1).to_s + "予定"
 
     - @customers.each do |customer|
       tr
@@ -36,8 +47,11 @@ h1
         - customer.ordered_meals.each do |ordered_meal|
           td 
             = ordered_meal.ideal_served_time.strftime("%H:%M")
-          td 
-            = ordered_meal.schedules.first.end_time.strftime("%H:%M")
+          td
+            - if OrderedMeal.finish_all?
+              = ordered_meal.actual_served_time.strftime("%H:%M")
+            - else
+              = ordered_meal.schedules.first.end_time.strftime("%H:%M")
 
 .scheduling
   - @schedule_ary = []
@@ -59,6 +73,8 @@ h1
         | 開始時間
       th
         | 終了時間
+      th 
+        | 取り消し(リスケ)時間
 
     - @chefs.each do |chef|
       - schedules = chef.schedules.includes(:cook, :ordered_meal).sort{|a, b| a.start_time <=> b.start_time}
@@ -81,6 +97,8 @@ h1
           td 
             = schedule.end_time.strftime("%H:%M")
             / - @schedule_ary << [schedule.time_change_ary(@start_time)]
+          td
+            = schedule.reschedule_time.strftime("%H:%M") if schedule.reschedule_time.present?
 
         
 

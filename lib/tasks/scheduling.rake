@@ -21,7 +21,7 @@ namespace :scheduling do
 
         chef, @ajusted_end_time = search_chef(start_time, end_time, cook.skill, cook.is_free)
         @ajusted_start_time = @ajusted_end_time - cook.time * chef.cook_speed * 60
-        Schedule.create!(chef_id: chef.id, cook_id: cook.id, ordered_meal_id: ordered_meal.id, start_time: @ajusted_start_time, end_time: @ajusted_end_time, is_free: cook.is_free)
+        Schedule.create!(chef_id: chef.id, cook_id: cook.id, ordered_meal_id: ordered_meal.id, start_time: @ajusted_start_time, end_time: @ajusted_end_time, is_free: cook.is_free, is_rescheduled: false)
       end
     end
   end
@@ -97,10 +97,13 @@ namespace :scheduling do
         staging_cooks.delete_at(index)
       end
     end
+  end
 
-
-
-
+  task 'クラスメソッド仕様'
+  task :create3 => :environment do
+    Schedule.all.destroy_all
+    ordered_meal_ids = OrderedMeal.all.pluck(:id)
+    Schedule.backward_scheduling(nil, false, ordered_meal_ids)
   end
 
 
