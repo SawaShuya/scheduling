@@ -30,7 +30,7 @@ class OutputsController < ApplicationController
       end
       csv << []
       csv << [1, "スケジューリング"]
-      column_name = %W(シェフ 顧客 料理名 調理id 順番 料理工程名 必要スキル 開始時間 終了時間 リスケ時間)
+      column_name = %W(シェフ 顧客id 料理名 調理id 順番 料理工程名 必要スキル 開始時間 終了時間 スケジュールid リスケ時間)
       csv << column_name
       chefs.each do |chef|
         schedules = chef.schedules.includes(:cook, :ordered_meal).sort{|a, b| a.start_time <=> b.start_time}
@@ -47,11 +47,13 @@ class OutputsController < ApplicationController
             schedule.cook.skill,
             schedule.start_time.strftime("%H:%M"),
             schedule.end_time.strftime("%H:%M"),
+            schedule.id,
             reschedule_time
           ]
           csv << column_values
         end
       end
+      csv << []
       csv << ["設定値"]
       csv << [3, "シェフ"]
       column_name = %W(id スキルレベル)

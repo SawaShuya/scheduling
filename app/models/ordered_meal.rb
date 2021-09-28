@@ -13,9 +13,10 @@ class OrderedMeal < ApplicationRecord
       if self.finish_all?
         surve_time = ordered_meal.actual_served_time
       else
-        surve_time = ordered_meal.schedules.last.end_time
+        surve_time = ordered_meal.schedules.first.end_time
       end
       sum += ((ordered_meal.ideal_served_time - surve_time)/60) ** 2
+      # byebug
     end
 
     return sum
