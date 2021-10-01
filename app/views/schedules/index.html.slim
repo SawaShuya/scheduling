@@ -3,6 +3,8 @@ h1
   | 出力
 .start_active 
   = link_to "start", active_path, method: :patch
+.moment 
+  = link_to "go to moment", moment_path
 .csv-buttun 
   = link_to "create CSV", post_csv_path, method: :post
 
@@ -44,7 +46,7 @@ h1
           = customer.style.name
         td 
           = customer.speed
-        - customer.ordered_meals.each do |ordered_meal|
+        - customer.ordered_meals.where(is_rescheduled: false).each do |ordered_meal|
           td 
             = ordered_meal.ideal_served_time.strftime("%H:%M")
           td
@@ -74,7 +76,7 @@ h1
       th
         | 終了時間
       th 
-        | 取り消し(リスケ)時間
+        | リスケ生成時間
 
     - @chefs.each do |chef|
       - schedules = chef.schedules.includes(:cook, :ordered_meal).sort{|a, b| a.start_time <=> b.start_time}

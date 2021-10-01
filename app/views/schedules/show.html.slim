@@ -1,0 +1,37 @@
+.time
+  = @time.strftime("%H:%M")
+
+.next 
+  = link_to "next", moment_path(next: true)
+
+.chef
+  .chef_display
+    - @chefs.each do |chef|
+      table 
+        tr
+          th 
+            | id 
+          td 
+            = chef.id 
+          td
+        tr 
+          th 
+            | 実行中の調理
+          td 
+            - schedule = chef.schedules.find_by('is_rescheduled = ? and start_time <= ? and end_time > ?', false, @time, @time)
+            - if schedule.present?
+              = schedule.cook.meal.name + " " + schedule.cook.name 
+          td 
+            - if schedule.present?
+              = "~" + schedule.end_time.strftime("%H:%M")
+        tr 
+          th 
+            | 次の調理
+          td 
+            - next_schedule = chef.schedules.where('is_rescheduled = ? and start_time > ?', false, @time).last
+            - if next_schedule.present?
+              = next_schedule.cook.meal.name + " " + next_schedule.cook.name 
+          td 
+            - if next_schedule.present?
+              = next_schedule.start_time.strftime("%H:%M") + "~"+  next_schedule.end_time.strftime("%H:%M")
+

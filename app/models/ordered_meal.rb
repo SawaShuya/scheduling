@@ -4,12 +4,12 @@ class OrderedMeal < ApplicationRecord
   has_many :schedules, dependent: :destroy
 
   def self.finish_all?
-    OrderedMeal.where(actual_served_time: nil).blank?
+    OrderedMeal.where(actual_served_time: nil, is_rescheduled: false).blank?
   end
 
   def self.time_satisfaction
     sum = 0
-    self.all.each do |ordered_meal|
+    self.where(is_rescheduled: false).each do |ordered_meal|
       if self.finish_all?
         surve_time = ordered_meal.actual_served_time
       else
@@ -44,30 +44,33 @@ class OrderedMeal < ApplicationRecord
   end
 
   def self.check_pace(time)
-    ordered_meals = self.where.not(actual_served_time: nil)
+    ordered_meals = self.where(is_rescheduled: false).where.not(actual_served_time: nil)
     # byebug
     ordered_meals.each_with_index do |ordered_meal, j|
       # if ordered_meal.check_time == time && ordered_meals[j+1].present? && ordered_meal.customer == ordered_meals[j+1].customer
       if ordered_meal.check_time == time
-        customer_meals = ordered_meal.customer.ordered_meals.where(id: ordered_meal.id..ordered_meal.customer.ordered_meals.last.id)
+        customer_meals = ordered_meal.customer.ordered_meals.where(is_rescheduled: false, is_started: false).or(OrderedMeal.where(id: ordered_meal.id)).sort
         customer_meals.each_with_index do |customer_meal, i|
           if customer_meals[i+1].present?
             if i == 0
               next_ideal_serve_time = customer_meal.actual_served_time + customer_meal.next_timing * 60
-              customer_meals[i+1].update(ideal_served_time: next_ideal_serve_time)
-              # byebug
-            elsif i != customer_meals.count - 1
+            else
               next_ideal_serve_time = customer_meal.ideal_served_time + customer_meal.next_timing * 60
-              customer_meals[i+1].update(ideal_served_time: next_ideal_serve_time)
             end
+            OrderedMeal.reschedule_ordered_meal(customer_meals[i+1], next_ideal_serve_time)
+            customer_meals[i+1].update(is_rescheduled: true, reschedule_time: time)
           end
         end
+        # byebug
         Schedule.rescheduling(time)
       end
     end
-
   end
 
-  
-  
+  def self.reschedule_ordered_meal(next_ordered_meal, next_ideal_serve_time)
+    new_ordered_meal_params = next_ordered_meal.attributes.reject{|key, value| key == "id" || key == "created_at" || key == "updated_at" || key == "ideal_served_time"}
+    new_ordered_meal_params.merge!({ideal_served_time: next_ideal_serve_time})
+    OrderedMeal.create!(new_ordered_meal_params)
+    
+  end
 end

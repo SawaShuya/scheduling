@@ -19,4 +19,21 @@ class SchedulesController < ApplicationController
     redirect_to root_path
   end
 
+  def show
+    if params[:next] == "true"
+      count_up
+    end
+    @time = Schedule.where(is_rescheduled: false).minimum(:start_time)
+    @chefs = Chef.all
+  end
+
+  def count_up
+    if @time.present?
+      @time += 60
+    else
+      @time = Schedule.where(is_rescheduled: false).minimum(:start_time)
+    end
+
+  end
+
 end

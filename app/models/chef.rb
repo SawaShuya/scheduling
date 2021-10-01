@@ -12,7 +12,7 @@ class Chef < ApplicationRecord
     return speed
   end
 
-  def self.search(start_time, end_time, skill, is_free)
+  def self.search(start_time, end_time, skill, is_free, ordered_meal_ids)
     chefs = self.where(skill: skill.to_i..3).sort{|a, b| a.skill <=> b.skill}
     @end_time = end_time
 
@@ -21,8 +21,8 @@ class Chef < ApplicationRecord
     else
       chefs.each do |chef|
         if chef.schedules.where(is_free: false, is_rescheduled: false).where('end_time > ? and ? > start_time', start_time, end_time).exists?
-          if @end_time == end_time || @end_time < chef.schedules.where(is_free: false, is_rescheduled: false).minimum(:start_time)
-            @end_time = chef.schedules.where(is_free: false, is_rescheduled: false).minimum(:start_time)
+          if @end_time == end_time || @end_time < chef.schedules.where(is_free: false, is_rescheduled: false, ordered_meal_id: [ordered_meal_ids]).minimum(:start_time)
+            @end_time = chef.schedules.where(is_free: false, is_rescheduled: false, ordered_meal_id: [ordered_meal_ids]).minimum(:start_time)
             @chef = chef
           end
         else

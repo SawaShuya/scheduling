@@ -6,6 +6,8 @@ create_table "ordered_meals", force: :cascade do |t|
   t.time :actual_served_time
 
   t.boolean :is_started, null: false, default: true
+  t.boolean :is_rescheduled, default: true
+  t.time :reschedule_time
   
   t.datetime :created_at
   t.datetime :updated_at
