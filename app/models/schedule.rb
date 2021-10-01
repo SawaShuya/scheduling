@@ -47,8 +47,6 @@ class Schedule < ApplicationRecord
     end
     
     ordered_meal_ids = OrderedMeal.where(is_started: false).pluck(:id) - recent_orderd_meal_ids
-    # byebug
-    # schedules = Schedule.where(ordered_meal_id: [ordered_meal_ids])
     backward_scheduling(time, true, ordered_meal_ids)
   end
 
@@ -56,9 +54,6 @@ class Schedule < ApplicationRecord
     schedules = Schedule.where(ordered_meal_id: [ordered_meal_ids])
     schedules.each do |schedule|
       schedule.update(is_rescheduled: true)
-      # unless schedule.ordered_meal.is_rescheduled
-      #   schedule.ordered_meal.update(is_rescheduled: true)
-      # end
     end
   end
 
@@ -75,13 +70,9 @@ class Schedule < ApplicationRecord
         #[[調理終了時間, 調理工程, 注文料理id], ....]
         ordered_meal = ordered_meals.where(customer_id: customer.id).last
         staging_cooks << [ordered_meal.ideal_served_time + time_diff, ordered_meal.meal.cooks.last, ordered_meal.id]
-        # if time_diff != 0
-        #   byebug
-        # end
       end
     end
 
-    # save_data = []
     max_time_diff = 0
     while staging_cooks.length != 0 do
       end_time = staging_cooks.max[0]
@@ -96,9 +87,8 @@ class Schedule < ApplicationRecord
 
       new_schedule = Schedule.new(chef_id: chef.id, cook_id: cook.id, ordered_meal_id: ordered_meal_id, start_time: @ajusted_start_time, end_time: @ajusted_end_time, is_free: cook.is_free, reschedule_time: reschedule_time, is_rescheduled: false)  
       new_schedule.save!
-      # save_data << new_schedule
+
       if is_rescheduling && new_schedule.start_time < time
-        # byebug
         tmp_time_diff = (time - new_schedule.start_time)
         if max_time_diff < tmp_time_diff
           max_time_diff = tmp_time_diff
@@ -115,10 +105,8 @@ class Schedule < ApplicationRecord
       if next_cook.present?
         if next_cook.rear_cooks.present?
           rear_cook_schedule = Schedule.find_by(cook_id: next_cook.rear_cooks.first.id, ordered_meal_id: ordered_meal_id)
-          # rear_cook_schedule = search_rear_cook_schedule(save_data, next_cook.rear_cooks.first.id, ordered_meal_id)
           staging_cooks[index][0] = rear_cook_schedule.start_time
         elsif cook.meal.id != next_cook.meal.id
-          # ordered_meal = ordered_meals.find_by(id: new_schedule.ordered_meal.id - 1)
           ordered_meal = ordered_meals.where(customer_id: new_schedule.ordered_meal.customer_id, id: 0...new_schedule.ordered_meal.id).last
           staging_cooks[index][0] = [ordered_meal.ideal_served_time + time_diff, @ajusted_start_time].min
           staging_cooks[index][2] = ordered_meal.id
@@ -132,9 +120,6 @@ class Schedule < ApplicationRecord
     end
 
     if max_time_diff != 0
-      # byebug
-      # Schedule.where(ordered_meal_id: [ordered_meal_ids], is_rescheduled: false).destroy_all
-      # Schedule.backward_scheduling(time, is_rescheduling, ordered_meal_ids, max_time_diff)
       update_data = Schedule.where(ordered_meal_id: [ordered_meal_ids], is_rescheduled: false)
       update_data.each do |schedule|
         start_time = schedule.start_time + max_time_diff
@@ -143,15 +128,4 @@ class Schedule < ApplicationRecord
       end
     end
   end
-
-  # def self.search_rear_cook_schedule(save_data, cook_id, ordered_meal_id)
-  #   save_data.sort{|a, b| b <=> a}.each do |schedule|
-  #     if schedule.cook_id == cook_id && schedule.ordered_meal_id == ordered_meal_id
-  #       @rear_cook_schedule = schedule
-  #       break
-  #     end
-  #   end
-  #   return @rear_cook_schedule
-  # end
-
 end

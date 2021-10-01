@@ -16,7 +16,6 @@ class OrderedMeal < ApplicationRecord
         surve_time = ordered_meal.schedules.first.end_time
       end
       sum += ((ordered_meal.ideal_served_time - surve_time)/60) ** 2
-      # byebug
     end
 
     return sum
@@ -45,9 +44,7 @@ class OrderedMeal < ApplicationRecord
 
   def self.check_pace(time)
     ordered_meals = self.where(is_rescheduled: false).where.not(actual_served_time: nil)
-    # byebug
     ordered_meals.each_with_index do |ordered_meal, j|
-      # if ordered_meal.check_time == time && ordered_meals[j+1].present? && ordered_meal.customer == ordered_meals[j+1].customer
       if ordered_meal.check_time == time
         customer_meals = ordered_meal.customer.ordered_meals.where(is_rescheduled: false, is_started: false).or(OrderedMeal.where(id: ordered_meal.id)).sort
         customer_meals.each_with_index do |customer_meal, i|
@@ -61,7 +58,6 @@ class OrderedMeal < ApplicationRecord
             customer_meals[i+1].update(is_rescheduled: true, reschedule_time: time)
           end
         end
-        # byebug
         Schedule.rescheduling(time)
       end
     end
