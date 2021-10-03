@@ -72,8 +72,8 @@ class OrderedMeal < ApplicationRecord
             if i == 0
               next_ideal_serve_time = customer_meal.actual_served_time + customer_meal.next_timing * 60
             else
-              # next_ideal_serve_time = customer_meal.ideal_served_time + customer_meal.next_timing(average_velocity) * 60
-              next_ideal_serve_time = customer_meal.ideal_served_time + customer_meal.next_timing * 60
+              next_ideal_serve_time = customer_meal.ideal_served_time + customer_meal.next_timing(average_velocity) * 60
+              # next_ideal_serve_time = customer_meal.ideal_served_time + customer_meal.next_timing * 60
             end
             OrderedMeal.reschedule_ordered_meal(customer_meals[i+1], next_ideal_serve_time)
             customer_meals[i+1].update(is_rescheduled: true, reschedule_time: time)
