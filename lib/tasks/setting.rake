@@ -6,6 +6,7 @@ namespace :setting do
     Customer.create_samples
     ordered_meal_ids = OrderedMeal.all.pluck(:id)
     Schedule.backward_scheduling(nil, false, ordered_meal_ids)
+    ProcessTime.set_zero_time
   end
 
   desc "顧客の作成"
@@ -21,6 +22,7 @@ namespace :setting do
     Chef.reset_work_time
     ordered_meal_ids = OrderedMeal.all.pluck(:id)
     Schedule.backward_scheduling(nil, false, ordered_meal_ids)
+    ProcessTime.set_zero_time
   end
 
   

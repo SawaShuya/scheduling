@@ -20,20 +20,14 @@ class SchedulesController < ApplicationController
   end
 
   def show
-    if params[:next] == "true"
-      count_up
-    end
-    @time = Schedule.where(is_rescheduled: false).minimum(:start_time)
+    @time = ProcessTime.now
     @chefs = Chef.all
   end
 
-  def count_up
-    if @time.present?
-      @time += 60
-    else
-      @time = Schedule.where(is_rescheduled: false).minimum(:start_time)
-    end
-
+  def next_time
+    next_time = ProcessTime.now + 60
+    ProcessTime.first.update(now: next_time)
+    redirect_to moment_path
   end
 
 end

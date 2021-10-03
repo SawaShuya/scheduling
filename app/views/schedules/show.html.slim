@@ -1,37 +1,58 @@
 .time
-  = @time.strftime("%H:%M")
+  h3
+    = @time.strftime("%H:%M")
 
 .next 
-  = link_to "next", moment_path(next: true)
+  = link_to "next", next_time_path, method: :patch
 
 .chef
   .chef_display
     - @chefs.each do |chef|
-      table 
-        tr
-          th 
-            | id 
-          td 
-            = chef.id 
-          td
-        tr 
-          th 
-            | 実行中の調理
-          td 
-            - schedule = chef.schedules.find_by('is_rescheduled = ? and start_time <= ? and end_time > ?', false, @time, @time)
-            - if schedule.present?
-              = schedule.cook.meal.name + " " + schedule.cook.name 
-          td 
-            - if schedule.present?
-              = "~" + schedule.end_time.strftime("%H:%M")
-        tr 
-          th 
-            | 次の調理
-          td 
-            - next_schedule = chef.schedules.where('is_rescheduled = ? and start_time > ?', false, @time).last
-            - if next_schedule.present?
-              = next_schedule.cook.meal.name + " " + next_schedule.cook.name 
-          td 
-            - if next_schedule.present?
-              = next_schedule.start_time.strftime("%H:%M") + "~"+  next_schedule.end_time.strftime("%H:%M")
+      .card.mb-5
+        table.table
+          tr
+            th 
+              | シェフid 
+            td 
+              = chef.id 
+            td
+            td
+            td
+          tr 
+            th 
+              | 実行中の調理
+            td 
+              - schedule = chef.schedules.find_by('is_rescheduled = ? and start_time <= ? and end_time >= ?', false, @time, @time)
+              - if schedule.present?
+                = schedule.cook.meal.name 
+              - else 
+                | ------
+            td 
+              - if schedule.present?
+                = schedule.cook.name 
+            td 
+              - if schedule.present?
+                = "~" + schedule.end_time.strftime("%H:%M")
+            td 
+              - if schedule.present?
+                = schedule.cook.place.name
+          tr 
+            th 
+              | 次の調理
+            td 
+              - next_schedule = chef.schedules.where('is_rescheduled = ? and start_time > ?', false, @time).last
+              - if next_schedule.present?
+                = next_schedule.cook.meal.name 
+              - else 
+                | ------
+            td 
+              - if next_schedule.present?
+                = next_schedule.cook.name
+            td 
+              - if next_schedule.present?
+                = next_schedule.start_time.strftime("%H:%M") + "~"+  next_schedule.end_time.strftime("%H:%M")
+
+            td 
+              - if next_schedule.present?
+                = next_schedule.cook.place.name
 

@@ -71,3 +71,7 @@ gem 'html2slim'
 
 gem 'better_errors'
 gem 'binding_of_caller'
+
+gem 'bootstrap', '~> 4.5'
+gem 'jquery-rails'
+gem 'font-awesome-sass', '~> 5.13'

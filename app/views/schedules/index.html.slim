@@ -1,23 +1,23 @@
 
 h1
   | 出力
-.start_active 
+.start_active.mb-2
   = link_to "start", active_path, method: :patch
-.moment 
+.moment.mb-2
   = link_to "go to moment", moment_path
-.csv-buttun 
+.csv-buttun.mb-5
   = link_to "create CSV", post_csv_path, method: :post
 
-.objectives 
-  table 
+.objectives.mb-5
+  table
     tr 
       td 
         | 時間不満足度
       td 
         = @time_satisfaction
   
-.customers
-  table 
+.customers.mb-5
+  table.table
     tr 
       th
         | id 
@@ -57,7 +57,7 @@ h1
 
 .scheduling
   - @schedule_ary = []
-  table
+  table.table
     tr 
       th
         | シェフ名
