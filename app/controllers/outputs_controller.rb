@@ -123,7 +123,7 @@ class OutputsController < ApplicationController
 
     end
 
-    time = Time.current.strftime("%Y%H%M")
+    time = Time.current.strftime("%Y%m%d%H%M")
     send_data(csv_data, filename: time + ".csv")
   end
 end

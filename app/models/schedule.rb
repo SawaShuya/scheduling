@@ -53,7 +53,11 @@ class Schedule < ApplicationRecord
   def self.staging_reschedule(ordered_meal_ids)
     schedules = Schedule.where(ordered_meal_id: [ordered_meal_ids])
     schedules.each do |schedule|
-      schedule.update(is_rescheduled: true)
+      unless schedule.is_rescheduled
+        schedule.update(is_rescheduled: true)
+        removed_time = schedule.chef.work_time - (schedule.end_time - schedule.start_time).round
+        schedule.chef.update(work_time: removed_time)
+      end
     end
   end
 
@@ -86,7 +90,10 @@ class Schedule < ApplicationRecord
       reschedule_time = time if is_rescheduling
 
       new_schedule = Schedule.new(chef_id: chef.id, cook_id: cook.id, ordered_meal_id: ordered_meal_id, start_time: @ajusted_start_time, end_time: @ajusted_end_time, is_free: cook.is_free, reschedule_time: reschedule_time, is_rescheduled: false)  
-      new_schedule.save!
+      if new_schedule.save!
+        work_time = chef.work_time + (@ajusted_end_time - @ajusted_start_time).round
+        chef.update(work_time: work_time)
+      end
 
       if is_rescheduling && new_schedule.start_time < time
         tmp_time_diff = (time - new_schedule.start_time)

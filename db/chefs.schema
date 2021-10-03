@@ -1,5 +1,6 @@
 create_table "chefs", force: :cascade do |t|
   t.integer :skill
+  t.bigint :work_time, default: 0
   
   t.datetime :created_at
   t.datetime :updated_at

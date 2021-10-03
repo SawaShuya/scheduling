@@ -12,8 +12,15 @@ class Chef < ApplicationRecord
     return speed
   end
 
+  def self.reset_work_time
+    Chef.all.each do |chef|
+      chef.update(work_time: 0)
+    end
+  end
+
   def self.search(start_time, end_time, skill, is_free, ordered_meal_ids)
-    chefs = self.where(skill: skill.to_i..3).sort{|a, b| a.skill <=> b.skill}
+    # chefs = self.where(skill: skill.to_i..3).sort{|a, b| a.skill <=> b.skill}
+    chefs = self.where(skill: skill.to_i..3).sort{|a, b| a.work_time <=> b.work_time}
     @end_time = end_time
 
     if is_free
