@@ -25,5 +25,15 @@ namespace :setting do
     ProcessTime.set_zero_time
   end
 
+  desc '顧客そのままで注文料理生成'
+  task :ordered_meal => :environment do
+    OrderedMeal.destroy_all
+    Customer.create_all_ordered_meals
+    Chef.reset_work_time
+    ordered_meal_ids = OrderedMeal.all.pluck(:id)
+    Schedule.backward_scheduling(nil, false, ordered_meal_ids)
+    ProcessTime.set_zero_time
+  end
+
   
 end

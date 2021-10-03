@@ -8,7 +8,7 @@ class SchedulesController < ApplicationController
   end
 
   def active
-    time = Schedule.minimum(:start_time)
+    time = ProcessTime.now
     end_time = Schedule.maximum(:end_time)
     while time <= end_time do
       Schedule.every_process(time)
@@ -16,6 +16,7 @@ class SchedulesController < ApplicationController
       end_time = Schedule.maximum(:end_time)
       time += 60
     end
+    ProcessTime.first.update(now: end_time)
     redirect_to root_path
   end
 
