@@ -87,6 +87,15 @@ class Schedule < ApplicationRecord
 
       chef, @ajusted_end_time = Chef.search(start_time, end_time, cook.skill, cook.is_free, ordered_meal_ids)
       @ajusted_start_time = @ajusted_end_time - (cook.time * chef.cook_speed).round * 60
+      
+      overlap_time = check_overlaps(chef, @ajusted_start_time, @ajusted_end_time, ordered_meal_ids) unless cook.is_free
+      if overlap_time.present? && overlap_time > 0
+        @ajusted_start_time += overlap_time
+        @ajusted_end_time += overlap_time
+        time_shift(ordered_meal_ids, overlap_time)
+
+      end
+      
       reschedule_time = time if is_rescheduling
 
       new_schedule = Schedule.new(chef_id: chef.id, cook_id: cook.id, ordered_meal_id: ordered_meal_id, start_time: @ajusted_start_time, end_time: @ajusted_end_time, is_free: cook.is_free, reschedule_time: reschedule_time, is_rescheduled: false)  
@@ -94,6 +103,7 @@ class Schedule < ApplicationRecord
         work_time = chef.work_time + (@ajusted_end_time - @ajusted_start_time).round
         chef.update(work_time: work_time)
       end
+
 
       if is_rescheduling && new_schedule.start_time < time
         tmp_time_diff = (time - new_schedule.start_time)
@@ -127,12 +137,35 @@ class Schedule < ApplicationRecord
     end
 
     if max_time_diff != 0
-      update_data = Schedule.where(ordered_meal_id: [ordered_meal_ids], is_rescheduled: false)
-      update_data.each do |schedule|
-        start_time = schedule.start_time + max_time_diff
-        end_time = schedule.end_time + max_time_diff
-        schedule.update(start_time: start_time, end_time: end_time)
-      end
+      time_shift(ordered_meal_ids, max_time_diff)
     end
   end
+
+  def self.check_overlaps(chef, start_time, end_time, ordered_meal_ids)
+    overlaps = chef.schedules.where(is_free: false, is_rescheduled: false, ordered_meal_id: [ordered_meal_ids]).where('end_time > ? and ? > start_time', start_time, end_time)
+    if overlaps.present?
+      overlaps.each do |schedule|
+        if schedule.start_time <= start_time
+          @overlap_time = 0 if @overlap_time.nil?
+          tmp_overlap_time = schedule.end_time - start_time
+          if @overlap_time < tmp_overlap_time
+            @overlap_time = tmp_overlap_time
+          end
+        end
+      end
+    end
+
+    return @overlap_time
+  end
+
+
+  def self.time_shift(ordered_meal_ids, shift_time)
+    update_data = Schedule.where(ordered_meal_id: [ordered_meal_ids], is_rescheduled: false)
+    update_data.each do |schedule|
+      start_time = schedule.start_time + shift_time
+      end_time = schedule.end_time + shift_time
+      schedule.update(start_time: start_time, end_time: end_time)
+    end
+  end
+
 end

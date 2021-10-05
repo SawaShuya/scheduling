@@ -5,102 +5,108 @@ h1
   = link_to "start", active_path, method: :patch
 .moment.mb-2
   = link_to "go to moment", moment_path
-.csv-buttun.mb-5
+.csv-buttun.mb-2
   = link_to "create CSV", post_csv_path, method: :post
+.setting
+  .mb-2
+    = link_to "reset all", reset_all_path, method: :patch
+  .mb-2
+    = link_to "reset ordered meal", reset_ordered_meal_path, method: :patch
 
-.objectives.mb-5
-  table
-    tr 
-      td 
-        | 時間不満足度
-      td 
-        = @time_satisfaction
-  
-.customers.mb-5
-  table.table
-    tr 
-      th
-        | id 
-      th 
-        | 予約時間
-      th 
-        | 顧客形態
-      th 
-        | 固有食事ペース
-      - 5.times do |i|
+- if @chefs.present? && @chefs.first.schedules.present?
+  .objectives.mb-5
+    table
+      tr 
+        td 
+          | 時間不満足度
+        td 
+          = @time_satisfaction
+    
+  .customers.mb-5
+    table.table
+      tr 
+        th
+          | id 
         th 
-          = "#" + (i + 1).to_s + "理想"
+          | 予約時間
         th 
-          - if OrderedMeal.finish_all?
-            = "#" + (i + 1).to_s + "提供"
-          - else
-            = "#" + (i + 1).to_s + "予定"
-
-    - @customers.each do |customer|
-      tr
-        td 
-          = customer.id 
-        td 
-          = customer.reserved_time.strftime("%H:%M")
-        td 
-          = customer.style.name
-        td 
-          = customer.speed
-        - customer.ordered_meals.where(is_rescheduled: false).each do |ordered_meal|
-          td 
-            = ordered_meal.ideal_served_time.strftime("%H:%M")
-          td
+          | 顧客形態
+        th 
+          | 固有食事ペース
+        - 5.times do |i|
+          th 
+            = "#" + (i + 1).to_s + "理想"
+          th 
             - if OrderedMeal.finish_all?
-              = ordered_meal.actual_served_time.strftime("%H:%M")
+              = "#" + (i + 1).to_s + "提供"
             - else
-              = ordered_meal.schedules.first.end_time.strftime("%H:%M")
+              = "#" + (i + 1).to_s + "予定"
 
-.scheduling
-  - @schedule_ary = []
-  table.table
-    tr 
-      th
-        | シェフ名
-      th 
-        | 顧客
-      th 
-        | 料理名
-      th 
-        | 順番
-      th 
-        | 料理工程名
-      th 
-        | 必要スキル
-      th 
-        | 開始時間
-      th
-        | 終了時間
-      th 
-        | リスケ生成時間
-
-    - @chefs.each do |chef|
-      - schedules = chef.schedules.includes(:cook, :ordered_meal).sort{|a, b| a.start_time <=> b.start_time}
-      - schedules.each_with_index do |schedule, i|
+      - @customers.each do |customer|
         tr
           td 
-            = chef.id if i == 0
+            = customer.id 
           td 
-            = schedule.ordered_meal.customer_id
-          td
-            = schedule.ordered_meal.meal.name 
+            = customer.reserved_time.strftime("%H:%M")
           td 
-            = schedule.cook.permutation
+            = customer.style.name
           td 
-            = schedule.cook.name 
-          td 
-            = schedule.cook.skill
-          td 
-            = schedule.start_time.strftime("%H:%M")
-          td 
-            = schedule.end_time.strftime("%H:%M")
-            / - @schedule_ary << [schedule.time_change_ary(@start_time)]
-          td
-            = schedule.reschedule_time.strftime("%H:%M") if schedule.reschedule_time.present?
+            = customer.speed
+          - customer.ordered_meals.where(is_rescheduled: false).each do |ordered_meal|
+            td 
+              = ordered_meal.ideal_served_time.strftime("%H:%M")
+            td
+              - if OrderedMeal.finish_all?
+                = ordered_meal.actual_served_time.strftime("%H:%M")
+              - else
+                = ordered_meal.schedules.first.end_time.strftime("%H:%M")
+
+  .scheduling
+    - @schedule_ary = []
+    table.table
+      tr 
+        th
+          | シェフ名
+        th 
+          | 顧客
+        th 
+          | 料理名
+        th 
+          | 順番
+        th 
+          | 料理工程名
+        th 
+          | 必要スキル
+        th 
+          | 開始時間
+        th
+          | 終了時間
+        th 
+          | リスケ生成時間
+
+      - @chefs.each do |chef|
+        - schedules = chef.schedules.includes(:cook, :ordered_meal).sort{|a, b| a.start_time <=> b.start_time}
+        - schedules.each_with_index do |schedule, i|
+          tr
+            td 
+              = chef.id if i == 0
+            td 
+              = schedule.ordered_meal.customer_id
+            td
+              = schedule.ordered_meal.meal.name 
+            td 
+              = schedule.cook.permutation
+            td 
+              = schedule.cook.name 
+            td 
+              = schedule.cook.skill
+            td 
+              = schedule.start_time.strftime("%H:%M")
+            td 
+              = schedule.end_time.strftime("%H:%M")
+              / - @schedule_ary << [schedule.time_change_ary(@start_time)]
+            td
+              = schedule.reschedule_time.strftime("%H:%M") if schedule.reschedule_time.present?
 
         
 

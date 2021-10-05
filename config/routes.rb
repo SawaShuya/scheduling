@@ -3,8 +3,9 @@ Rails.application.routes.draw do
   root "schedules#index"
   get "schedules/moment" => "schedules#show", as: "moment"
   patch "schedules/next" => "schedules#next_time", as: "next_time"
+  patch "schedules/reset_all" => "schedules#reset_all", as: "reset_all"
+  patch "schedules/reset_ordered_meal" => "schedules#reset_ordered_meal", as: "reset_ordered_meal"
 
   post "outputs" => "outputs#send_csv", as: "post_csv"
-
   patch "active" => "schedules#active", as: "active"
 end

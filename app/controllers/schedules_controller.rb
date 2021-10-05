@@ -31,4 +31,24 @@ class SchedulesController < ApplicationController
     redirect_to moment_path
   end
 
+  def reset_all
+    Customer.all.destroy_all
+    Chef.reset_work_time
+    Customer.create_samples
+    ordered_meal_ids = OrderedMeal.all.pluck(:id)
+    Schedule.backward_scheduling(nil, false, ordered_meal_ids)
+    ProcessTime.set_zero_time
+    redirect_to root_path
+  end
+
+  def reset_ordered_meal
+    OrderedMeal.destroy_all
+    Customer.create_all_ordered_meals
+    Chef.reset_work_time
+    ordered_meal_ids = OrderedMeal.all.pluck(:id)
+    Schedule.backward_scheduling(nil, false, ordered_meal_ids)
+    ProcessTime.set_zero_time
+    redirect_to root_path
+  end
+
 end
