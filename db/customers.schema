@@ -3,7 +3,6 @@ create_table "customers", force: :cascade do |t|
   t.time :reserved_time
   t.time :finish_time
   t.float :velocity_params
-  t.float :average_velocity_params
   
   t.datetime :created_at
   t.datetime :updated_at

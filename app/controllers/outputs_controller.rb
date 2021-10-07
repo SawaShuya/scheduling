@@ -22,13 +22,14 @@ class OutputsController < ApplicationController
 
       csv << []
       csv << [1, "注文料理"]
-      column_name = ["id", "顧客id", "料理id", "予定提供時間", "実際の提供時間", "実際の提供スピードパラメータ", "リスケ時間"]
+      column_name = ["id", "顧客id", "料理id", "理想提供時間", "実際の提供時間", "実際の提供スピードパラメータ", "リスケ時間", "予測速度パラメータ"]
       csv << column_name
       ordered_meals = OrderedMeal.all.sort{|a, b| a.customer_id <=> b.customer_id}
       ordered_meals.each do |ordered_meal|
 
         actual_served_time = ordered_meal.actual_served_time.strftime("%H:%M") if ordered_meal.actual_served_time.present?
         reschedule_time = ordered_meal.reschedule_time.strftime("%H:%M") if ordered_meal.reschedule_time.present?
+        average_velocity_params = ordered_meal.average_velocity_params if ordered_meal.average_velocity_params
         column_values = [
           ordered_meal.id,
           ordered_meal.customer_id,
@@ -36,7 +37,8 @@ class OutputsController < ApplicationController
           ordered_meal.ideal_served_time.strftime("%H:%M"),
           actual_served_time,
           ordered_meal.actual_velocity_params,
-          reschedule_time
+          reschedule_time,
+          average_velocity_params
         ]
         csv << column_values
       end

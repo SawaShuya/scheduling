@@ -27,7 +27,7 @@ class Chef < ApplicationRecord
       @chef = chefs.first
     else
       chefs.each do |chef|
-        if chef.schedules.where(is_free: false, is_rescheduled: false).where('end_time >= ? and ? >= start_time', start_time, end_time).exists?
+        if chef.schedules.where(is_free: false, is_rescheduled: false).where('end_time > ? and ? > start_time', start_time, end_time).exists? && chef.schedules.where(is_free: false, is_rescheduled: false, ordered_meal_id: [ordered_meal_ids]).exists?
           if @end_time == end_time || @end_time < chef.schedules.where(is_free: false, is_rescheduled: false, ordered_meal_id: [ordered_meal_ids]).minimum(:start_time)
             @end_time = chef.schedules.where(is_free: false, is_rescheduled: false, ordered_meal_id: [ordered_meal_ids]).minimum(:start_time)
             @chef = chef

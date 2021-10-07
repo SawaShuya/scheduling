@@ -97,11 +97,14 @@ class Schedule < ApplicationRecord
       chef, @ajusted_end_time = Chef.search(start_time, end_time, cook.skill, cook.is_free, ordered_meal_ids)
       @ajusted_start_time = @ajusted_end_time - (cook.time * chef.cook_speed).round * 60
       
-      overlap_time = check_overlaps(chef, @ajusted_start_time, @ajusted_end_time, ordered_meal_ids) unless cook.is_free
-      if overlap_time.present? && overlap_time > 0
-        @ajusted_start_time += overlap_time
-        @ajusted_end_time += overlap_time
-        time_shift(ordered_meal_ids, overlap_time)
+      unless cook.is_free
+        overlap_time = check_overlaps(chef, @ajusted_start_time,@ajusted_start_time, ordered_meal_ids)
+        if overlap_time.present? && overlap_time > 0
+          # byebug
+          @ajusted_start_time += overlap_time
+          @ajusted_end_time += overlap_time
+          time_shift(ordered_meal_ids, overlap_time)
+        end
       end
       
       reschedule_time = time if is_rescheduling
@@ -133,7 +136,7 @@ class Schedule < ApplicationRecord
           staging_cooks[index][0] = rear_cook_schedule.start_time
         elsif cook.meal.id != next_cook.meal.id
           ordered_meal = ordered_meals.where(customer_id: new_schedule.ordered_meal.customer_id, id: 0...new_schedule.ordered_meal.id).last
-          staging_cooks[index][0] = [ordered_meal.ideal_served_time + time_diff, @ajusted_start_time].min
+          staging_cooks[index][0] = [ordered_meal.ideal_served_time, @ajusted_start_time].min
           staging_cooks[index][2] = ordered_meal.id
         else
           staging_cooks[index][0] = @ajusted_start_time
@@ -149,19 +152,25 @@ class Schedule < ApplicationRecord
     end
   end
 
-  def self.check_overlaps(chef, start_time, end_time, ordered_meal_ids)
-    overlaps = chef.schedules.where(is_free: false, is_rescheduled: false, ordered_meal_id: [ordered_meal_ids]).where('end_time > ? and ? > start_time', start_time, end_time)
+  def self.check_overlaps(chef, start_time, schedule_end_time, ordered_meal_ids)
+    end_time = chef.schedules.where(is_free: false, is_rescheduled: false, ordered_meal_id: [ordered_meal_ids]).minimum(:start_time)
+    if end_time.blank?
+    end_time = schedule_end_time
+    end
+    overlaps = chef.schedules.where(is_free: false, is_rescheduled: false).where('end_time > ? and ? > start_time', start_time, end_time)
     if overlaps.present?
+      @overlap_time = 0
       overlaps.each do |schedule|
-        if schedule.start_time <= start_time
-          @overlap_time = 0 if @overlap_time.nil?
-          tmp_overlap_time = schedule.end_time - start_time
-          if @overlap_time < tmp_overlap_time
-            @overlap_time = tmp_overlap_time
-          end
+        tmp_overlap_time = schedule.end_time - start_time
+        if @overlap_time < tmp_overlap_time
+          @overlap_time = tmp_overlap_time
         end
       end
     end
+
+    # if @overlap_time.present?
+    #   byebug
+    # end
 
     return @overlap_time
   end

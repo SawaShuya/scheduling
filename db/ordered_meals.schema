@@ -10,6 +10,7 @@ create_table "ordered_meals", force: :cascade do |t|
   t.time :reschedule_time
 
   t.float :actual_velocity_params
+  t.float :average_velocity_params
   
   t.datetime :created_at
   t.datetime :updated_at
