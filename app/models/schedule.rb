@@ -45,6 +45,15 @@ class Schedule < ApplicationRecord
         end
       end
     end
+
+    recent_orderd_meals = OrderedMeal.where(id: [recent_orderd_meal_ids])
+    recent_orderd_meals.each do |recent_ordered_meal|
+      ordered_meal = OrderedMeal.find_by(customer_id: recent_ordered_meal.customer_id, meal_id: recent_ordered_meal.meal_id, is_rescheduled: false)
+      recent_ordered_meal.schedules.each do |schedule|
+        schedule.update(ordered_meal_id: ordered_meal.id) 
+      end
+      recent_orderd_meal_ids << ordered_meal.id
+    end
     
     ordered_meal_ids = OrderedMeal.where(is_started: false).pluck(:id) - recent_orderd_meal_ids
     backward_scheduling(time, true, ordered_meal_ids)
@@ -93,7 +102,6 @@ class Schedule < ApplicationRecord
         @ajusted_start_time += overlap_time
         @ajusted_end_time += overlap_time
         time_shift(ordered_meal_ids, overlap_time)
-
       end
       
       reschedule_time = time if is_rescheduling

@@ -3,33 +3,46 @@ class OutputsController < ApplicationController
   
   def send_csv
     chefs = Chef.all
-    customers = Customer.all.includes(:style).sort{|a, b| a.reserved_time <=> b.reserved_time}
+    customers = Customer.all.includes(:style)
 
     csv_data = CSV.generate(encoding: Encoding::SJIS) do |csv|
       csv << [0, "顧客"]
       column_name = ["id", "予約時間", "顧客形態", "固有食事ペース"]
-      5.times do |i|
-        column_name.concat ["#"+(i+1).to_s+"理想", "#"+(i+1).to_s+"予定"] 
-      end
       csv << column_name
-      customers.each do |customer|
-        values =[]
-        customer.ordered_meals.each do |ordered_meal|
-          
-          values.concat [ordered_meal.ideal_served_time.strftime("%H:%M"), ordered_meal.schedules.first.end_time.strftime("%H:%M")]
-        end
 
+      customers.each do |customer|
         column_values = [
           customer.id,
           customer.reserved_time.strftime("%H:%M"),
           customer.style.id,
           customer.speed
         ]
-        column_values.concat values
         csv << column_values
       end
+
       csv << []
-      csv << [1, "スケジューリング"]
+      csv << [1, "注文料理"]
+      column_name = ["id", "顧客id", "料理id", "予定提供時間", "実際の提供時間", "実際の提供スピードパラメータ", "リスケ時間"]
+      csv << column_name
+      ordered_meals = OrderedMeal.all.sort{|a, b| a.customer_id <=> b.customer_id}
+      ordered_meals.each do |ordered_meal|
+
+        actual_served_time = ordered_meal.actual_served_time.strftime("%H:%M") if ordered_meal.actual_served_time.present?
+        reschedule_time = ordered_meal.reschedule_time.strftime("%H:%M") if ordered_meal.reschedule_time.present?
+        column_values = [
+          ordered_meal.id,
+          ordered_meal.customer_id,
+          ordered_meal.meal_id,
+          ordered_meal.ideal_served_time.strftime("%H:%M"),
+          actual_served_time,
+          ordered_meal.actual_velocity_params,
+          reschedule_time
+        ]
+        csv << column_values
+      end
+
+      csv << []
+      csv << [2, "スケジューリング"]
       column_name = %W(シェフ 顧客id 料理名 調理id 順番 料理工程名 必要スキル 開始時間 終了時間 スケジュールid リスケ時間)
       csv << column_name
       chefs.each do |chef|
