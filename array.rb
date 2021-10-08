@@ -27,3 +27,8 @@
 [{ahead_id: 15, rear_id: 19}, {ahead_id: 17, rear_id: 19}, {ahead_id: 18, rear_id: 19}]
 [{ahead_id: 13, rear_id: 16}]
 [{ahead_id: 20, rear_id: 23}, {ahead_id: 21, rear_id: 23}, {ahead_id: 22, rear_id: 23}]
+
+[{ahead_id: 1, rear_id: 2}, {ahead_id: 2, rear_id: 3}]
+[{ahead_id: 4, rear_id: 5}, {ahead_id: 5, rear_id: 6}, {ahead_id: 6, rear_id: 7}]
+[{ahead_id: 8, rear_id: 9}, {ahead_id: 11, rear_id: 12}]
+[{ahead_id: 14, rear_id: 15}, {ahead_id: 16, rear_id: 17}]
