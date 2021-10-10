@@ -9,20 +9,25 @@ class SchedulesController < ApplicationController
 
   def active
     time = ProcessTime.now
-    end_time = Schedule.maximum(:end_time)
-    while time <= end_time do
+    end_time = Schedule.maximum(:end_time).round
+    i = 0
+    while time <= end_time && i < 300 do
+      time = time.round
       Schedule.every_process(time)
       OrderedMeal.check_pace(time)
-      end_time = Schedule.maximum(:end_time)
+      end_time = Schedule.maximum(:end_time).round
       time += 60
+      i += 1
     end
-    ProcessTime.first.update(now: end_time)
+    ProcessTime.first.update(now: end_time.round)
     redirect_to root_path
   end
 
   def show
     @time = ProcessTime.now
     @chefs = Chef.all
+    Schedule.every_process(@time)
+    OrderedMeal.check_pace(@time)
   end
 
   def next_time

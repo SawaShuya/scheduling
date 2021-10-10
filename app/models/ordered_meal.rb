@@ -65,7 +65,7 @@ class OrderedMeal < ApplicationRecord
   def self.check_pace(time)
     ordered_meals = self.where(is_rescheduled: false, is_started: true).where.not(actual_served_time: nil)
     ordered_meals.each_with_index do |ordered_meal, j|
-      if ordered_meal.check_time == time
+      if ordered_meal.check_time == time && ordered_meal.meal_id != Meal.all.last.id
         average_velocity = ordered_meal.average_velocity
 
         customer_meals = ordered_meal.customer.ordered_meals.where(is_rescheduled: false, meal_id: ordered_meal.meal_id..8)
@@ -87,10 +87,13 @@ class OrderedMeal < ApplicationRecord
   end
 
   def self.reschedule_ordered_meal(next_ordered_meal, next_ideal_serve_time, average_velocity)
-    new_ordered_meal_params = next_ordered_meal.attributes.reject{|key, value| key == "id" || key == "created_at" || key == "updated_at" || key == "ideal_served_time"}
-    new_ordered_meal_params.merge!({ideal_served_time: next_ideal_serve_time, average_velocity_params: average_velocity})
+    new_ordered_meal_params = next_ordered_meal.attributes.reject{|key, value| key == "id" || key == "created_at" || key == "updated_at" || key == "ideal_served_time" || key == "is_started"}
+    new_ordered_meal_params.merge!({ideal_served_time: next_ideal_serve_time.round, average_velocity_params: average_velocity, is_started: false})
     ordered_meal = OrderedMeal.new(new_ordered_meal_params)
     ordered_meal.save!
+    if next_ordered_meal.is_started
+      ordered_meal.update(is_started: true)
+    end
 
     return ordered_meal
   end

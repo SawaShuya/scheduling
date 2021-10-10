@@ -29,7 +29,7 @@ class Customer < ApplicationRecord
 
     customer_number.times do |i|
       time = open_time + reserve_timing[rand(0..4)]*60
-      customer = Customer.new(style_id: rand(1..3), velocity_params: rand(velocity_range).round(1), reserved_time: time)
+      customer = Customer.new(style_id: rand(1..3), velocity_params: rand(velocity_range).round(1), reserved_time: time.round)
       if customer.save!
         customer.create_ordered_meals
       end
@@ -40,7 +40,7 @@ class Customer < ApplicationRecord
     meals = Meal.all
     next_serve_time = self.reserved_time + 5 * 60
     meals.each do |meal|
-      order_meal = self.ordered_meals.new(meal_id: meal.id, ideal_served_time: next_serve_time, is_started: false, is_rescheduled: false, actual_velocity_params: self.add_actual_velocity_params, average_velocity_params: self.style.velocity_params)
+      order_meal = self.ordered_meals.new(meal_id: meal.id, ideal_served_time: next_serve_time.round, is_started: false, is_rescheduled: false, actual_velocity_params: self.add_actual_velocity_params, average_velocity_params: self.style.velocity_params)
       order_meal.save
       next_serve_time += ((meal.eating_time + meal.interval) * self.style.velocity_params).round * 60
     end
