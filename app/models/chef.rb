@@ -22,15 +22,25 @@ class Chef < ApplicationRecord
     # chefs = self.where(skill: skill.to_i..3).sort{|a, b| a.skill <=> b.skill}
     chefs = self.where(skill: skill.to_i..3).sort{|a, b| a.work_time <=> b.work_time}
     @end_time = end_time
+    cook_time = end_time - start_time
+    is_overlapped = false
+    @chef = nil
 
     if is_free
       @chef = chefs.first
     else
       chefs.each do |chef|
-        if chef.schedules.where(is_free: false, is_rescheduled: false).where('end_time > ? and ? > start_time', start_time, end_time).exists? && chef.schedules.where(is_free: false, is_rescheduled: false, ordered_meal_id: [ordered_meal_ids]).exists?
-          if @end_time == end_time || @end_time < chef.schedules.where(is_free: false, is_rescheduled: false, ordered_meal_id: [ordered_meal_ids]).minimum(:start_time)
-            @end_time = chef.schedules.where(is_free: false, is_rescheduled: false, ordered_meal_id: [ordered_meal_ids]).minimum(:start_time)
-            @chef = chef
+        
+        # if chef.schedules.where(is_free: false, is_rescheduled: false).where('end_time > ? and ? > start_time', start_time, end_time).exists? && chef.schedules.where(is_free: false, is_rescheduled: false, ordered_meal_id: [ordered_meal_ids]).exists?
+        if chef.schedules.where(is_free: false, is_rescheduled: false).where('end_time > ? and ? > start_time', start_time, end_time).exists?
+          min_end_time = chef.schedules.where(is_free: false, is_rescheduled: false, ordered_meal_id: [ordered_meal_ids]).minimum(:start_time).round
+          if min_end_time.present? && min_end_time < end_time
+            min_start_time = (min_end_time - cook_time).round
+
+            if chef.schedules.where(is_free: false, is_rescheduled: false).where('end_time > ? and ? > start_time', min_start_time, min_end_time).blank? && (@end_time == end_time || @end_time < min_end_time)
+              @end_time = min_end_time
+              @chef = chef
+            end
           end
         else
           @chef = chef
@@ -40,6 +50,21 @@ class Chef < ApplicationRecord
       end
     end
 
-    return @chef, @end_time
+    if @chef.blank?
+      # byebug
+      chefs.each do |chef|
+        min_end_time = chef.schedules.where(is_free: false, is_rescheduled: false, ordered_meal_id: [ordered_meal_ids]).minimum(:start_time)
+        if min_end_time > end_time
+          min_end_time = end_time
+        end
+        if @end_time == end_time || @end_time < min_end_time
+          @end_time = min_end_time
+          @chef = chef
+        end
+      end
+      is_overlapped = true
+    end
+
+    return @chef, @end_time, is_overlapped
   end
 end

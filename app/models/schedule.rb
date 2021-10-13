@@ -99,18 +99,9 @@ class Schedule < ApplicationRecord
 
       start_time = end_time - cook.time * 60
 
-      chef, @ajusted_end_time = Chef.search(start_time.round, end_time.round, cook.skill, cook.is_free, ordered_meal_ids)
+      chef, @ajusted_end_time, is_overlapped = Chef.search(start_time.round, end_time.round, cook.skill, cook.is_free, ordered_meal_ids)
       @ajusted_start_time = @ajusted_end_time - (cook.time * chef.cook_speed).round * 60
-      
-      # unless cook.is_free
-      #   overlap_time = check_overlaps(chef, @ajusted_start_time, @ajusted_end_time, ordered_meal_ids)
-      #   if overlap_time.present? && overlap_time > 0
-      #     # byebug
-      #     @ajusted_start_time += overlap_time
-      #     @ajusted_end_time += overlap_time
-      #     time_shift(ordered_meal_ids, overlap_time)
-      #   end
-      # end
+
       
       reschedule_time = time if is_rescheduling
 
@@ -118,6 +109,11 @@ class Schedule < ApplicationRecord
       if new_schedule.save!
         work_time = chef.work_time + (@ajusted_end_time - @ajusted_start_time).round
         chef.update(work_time: work_time)
+      end
+
+      if is_overlapped
+        # byebug
+        forward_scheduling(chef, ordered_meal_ids)
       end
 
 
@@ -171,10 +167,6 @@ class Schedule < ApplicationRecord
       end
     end
 
-    # if @overlap_time.present?
-    #   byebug
-    # end
-
     return @overlap_time
   end
 
@@ -185,6 +177,56 @@ class Schedule < ApplicationRecord
       start_time = schedule.start_time + shift_time
       end_time = schedule.end_time + shift_time
       schedule.update(start_time: start_time, end_time: end_time)
+    end
+  end
+
+  def self.forward_scheduling(start_chef, ordered_meal_ids)
+    staging_schedule = []
+    chef_schedule = []
+    chefs = Chef.all
+    chefs.each_with_index do |chef|
+      chef_schedule << chef.schedules.where(ordered_meal_id: [ordered_meal_ids], is_rescheduled: false).sort{|a, b| b <=> a}.pluck(:id)
+      if chef == start_chef
+        staging_schedule << chef.schedules.where(ordered_meal_id: [ordered_meal_ids], is_rescheduled: false).sort{|a, b| b <=> a}.first
+      end
+    end
+
+    while staging_schedule.length != 0 do
+      schedule = staging_schedule[0]
+      chef = schedule.chef
+      # byebug
+
+      if chef.schedules.where(is_free: false, is_rescheduled: false).where('end_time > ? and ? > start_time', schedule.start_time, schedule.end_time).exists?
+        last_end_time = chef.schedules.where(is_free: false, is_rescheduled: false).where('end_time > ? and ? > start_time', schedule.start_time, schedule.end_time).maximum(:end_time)     
+      end
+
+      if schedule.cook.ahead_cooks.present?
+        last_schedules = Schedule.where(is_rescheduled: false, ordered_meal_id: schedule.ordered_meal_id ,cook_id: schedule.cook.ahead_cooks.pluck(:id))
+        if last_schedules.present? && schedule.start_time < last_schedules.maximum(:end_time) && (last_end_time.nil? || last_end_time < last_schedules.maximum(:end_time))
+          last_end_time = last_schedules.maximum(:end_time)
+        end
+      end
+
+      if last_end_time.present?
+        overlap_time = last_end_time - schedule.start_time
+        ajust_start_time = schedule.start_time + overlap_time
+        ajust_end_time = schedule.end_time + overlap_time
+
+        schedule.update(start_time: ajust_start_time.round, end_time: ajust_end_time.round)
+
+        schedule_index = chef_schedule[chef.id - 1].index(schedule.id)
+        if chef_schedule[chef.id - 1][schedule_index + 1].present?
+          staging_schedule << Schedule.find(chef_schedule[chef.id - 1][schedule_index + 1])
+        end
+
+        if schedule.cook.rear_cooks.present?
+          staging_schedule << Schedule.find_by(is_rescheduled: false, ordered_meal_id: schedule.ordered_meal_id, cook_id: schedule.cook.rear_cooks.first.id)
+        end
+      end
+
+      staging_schedule.shift
+      staging_schedule.sort!{|a, b| b <=> a}
+      staging_schedule.uniq!
     end
   end
 
