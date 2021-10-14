@@ -185,9 +185,9 @@ class Schedule < ApplicationRecord
     chef_schedule = []
     chefs = Chef.all
     chefs.each_with_index do |chef|
-      chef_schedule << chef.schedules.where(ordered_meal_id: [ordered_meal_ids], is_rescheduled: false).sort{|a, b| b <=> a}.pluck(:id)
+      chef_schedule << chef.schedules.where(ordered_meal_id: [ordered_meal_ids], is_rescheduled: false, is_free: false).sort{|a, b| a.start_time <=> b.start_time}.pluck(:id)
       if chef == start_chef
-        staging_schedule << chef.schedules.where(ordered_meal_id: [ordered_meal_ids], is_rescheduled: false).sort{|a, b| b <=> a}.first
+        staging_schedule << chef.schedules.where(ordered_meal_id: [ordered_meal_ids], is_rescheduled: false).last
       end
     end
 
@@ -197,7 +197,7 @@ class Schedule < ApplicationRecord
       # byebug
 
       if chef.schedules.where(is_free: false, is_rescheduled: false).where('end_time > ? and ? > start_time', schedule.start_time, schedule.end_time).exists?
-        last_end_time = chef.schedules.where(is_free: false, is_rescheduled: false).where('end_time > ? and ? > start_time', schedule.start_time, schedule.end_time).maximum(:end_time)     
+        last_end_time = chef.schedules.where(is_free: false, is_rescheduled: false).where('end_time > ? and ? > start_time and ? > start_time', schedule.start_time, schedule.end_time, schedule.start_time).maximum(:end_time)     
       end
 
       if schedule.cook.ahead_cooks.present?
@@ -215,6 +215,10 @@ class Schedule < ApplicationRecord
         schedule.update(start_time: ajust_start_time.round, end_time: ajust_end_time.round)
 
         schedule_index = chef_schedule[chef.id - 1].index(schedule.id)
+        if schedule_index.blank?
+          next_schedule = Schedule.where(is_free: false, is_rescheduled: false, chef_id: chef.id).where('start_time >= ?', schedule.start_time).last
+          schedule_index = chef_schedule[chef.id - 1].index(next_schedule.id)
+        end
         if chef_schedule[chef.id - 1][schedule_index + 1].present?
           staging_schedule << Schedule.find(chef_schedule[chef.id - 1][schedule_index + 1])
         end
@@ -225,7 +229,7 @@ class Schedule < ApplicationRecord
       end
 
       staging_schedule.shift
-      staging_schedule.sort!{|a, b| b <=> a}
+      staging_schedule.sort!{|a, b| a.start_time <=> b.start_time}
       staging_schedule.uniq!
     end
   end
