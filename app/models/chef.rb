@@ -61,7 +61,7 @@ class Chef < ApplicationRecord
       end
       if @chef.blank?
         @chef = chefs.first
-        @end_time = @chef.schedules.where(is_free: false, is_rescheduled: false, ordered_meal_id: [ordered_meal_ids]).minimum(:start_time)
+        @end_time = @chef.schedules.where(is_free: false, is_rescheduled: false, ordered_meal_id: [ordered_meal_ids]).minimum(:start_time) || end_time
       end
       is_overlapped = true
     end
