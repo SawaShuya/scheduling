@@ -3,6 +3,7 @@ class Schedule < ApplicationRecord
   belongs_to :cook
   belongs_to :chef
 
+
   def time_change_ary(chart_start_time)
     start_mark = ((start_time - chart_start_time) / 60).round
     end_mark = ((end_time - chart_start_time) / 60).round
@@ -10,25 +11,56 @@ class Schedule < ApplicationRecord
     return start_mark, end_mark
   end
 
+  def is_finished?
+    self.actual_end_time.present?
+  end
+
+  def ahead_cooks_finished?
+    ahead_cooks = self.chef.schedules.where(is_rescheduled: false, ordered_meal_id: self.ordered_meal_id, cook_id: self.cook.ahead_cooks.pluck(:id))
+    ahead_cooks.where(actual_end_time: nil).exists?
+  end
+
+  def last_ahead_cook
+    ahead_cooks = self.chef.schedules.where(is_rescheduled: false, ordered_meal_id: self.ordered_meal_id, cook_id: self.cook.ahead_cooks.pluck(:id))
+    ahead_cook = ahead_cooks.sort{|a, b| a.actual_end_time <=> b.actual_end_time}.last
+    return ahead_cook
+  end
+
+  def actual_cook_time
+    (self.cook.time * self.actual_velocity_params).round
+  end
+
   def self.every_process(time)
-    start_cook(time)
     end_cook(time)
+    start_cook(time)
   end
 
   def self.start_cook(time)
-    schedules = Schedule.where(start_time: time.round, is_rescheduled: false)
+    schedules = Schedule.where(is_rescheduled: false, actual_start_time: nil).where('start_time <= ?', time.round)
     schedules.each do |schedule|
-      if schedule.cook.permutation == 1
-        schedule.ordered_meal.update(is_started: true)
+      chef = schedule.chef
+      last_schedule = chef.schedules.where(is_rescheduled: false, is_free: false).where('start_time < ?', schedule.start_time.round).sort{|a, b| a.start_time <=> b.start_time}.last
+      if schedule.cook.ahead_cooks.present? && schedule.ahead_cooks_finished? && (last_schedule.nil? || !last_schedule.is_finished? || last_schedule.actual_end_time < schedule.last_ahead_cook.actual_end_time)
+        last_schedule = schedule.last_ahead_cook
+      end
+
+      if schedule.is_free || last_schedule.nil? || last_schedule.is_finished?
+        schedule.update(actual_start_time: time.round)
+        if schedule.cook.permutation == 1
+          schedule.ordered_meal.update(is_started: true)
+        end
       end
     end
   end
 
   def self.end_cook(time)
-    schedules = Schedule.where(end_time: time.round, is_rescheduled: false)
+    schedules = Schedule.where(is_rescheduled: false, actual_end_time: nil).where.not(actual_start_time: nil)
     schedules.each do |schedule|
-      if schedule.cook.is_last
-        schedule.ordered_meal.update(actual_served_time: time.round)
+      if (schedule.actual_start_time + schedule.actual_cook_time * 60).round <= time.round
+        schedule.update(actual_end_time: time.round)
+        if schedule.cook.is_last
+          schedule.ordered_meal.update(actual_served_time: time.round)
+        end
       end
     end
   end
@@ -101,11 +133,11 @@ class Schedule < ApplicationRecord
 
       chef, @ajusted_end_time, is_overlapped = Chef.search(start_time.round, end_time.round, cook.skill, cook.is_free, ordered_meal_ids)
       @ajusted_start_time = @ajusted_end_time - (cook.time * chef.cook_speed).round * 60
-
+      # @ajusted_start_time = @ajusted_end_time - cook.time.round * 60
       
       reschedule_time = time if is_rescheduling
 
-      new_schedule = Schedule.new(chef_id: chef.id, cook_id: cook.id, ordered_meal_id: ordered_meal_id, start_time: @ajusted_start_time.round, end_time: @ajusted_end_time.round, is_free: cook.is_free, reschedule_time: reschedule_time, is_rescheduled: false)  
+      new_schedule = Schedule.new(chef_id: chef.id, cook_id: cook.id, ordered_meal_id: ordered_meal_id, start_time: @ajusted_start_time.round, end_time: @ajusted_end_time.round, is_free: cook.is_free, reschedule_time: reschedule_time, is_rescheduled: false, actual_velocity_params: chef.actual_cook_speed)
       if new_schedule.save!
         work_time = chef.work_time + (@ajusted_end_time - @ajusted_start_time).round
         chef.update(work_time: work_time)

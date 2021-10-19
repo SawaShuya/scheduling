@@ -8,6 +8,11 @@ create_table "schedules", force: :cascade do |t|
   t.boolean :is_rescheduled, default: true
   t.time :reschedule_time
   
+  t.time :actual_start_time
+  t.time :actual_end_time
+
+  t.float :actual_velocity_params
+
   t.datetime :created_at
   t.datetime :updated_at
 end

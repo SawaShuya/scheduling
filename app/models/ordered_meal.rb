@@ -81,7 +81,7 @@ class OrderedMeal < ApplicationRecord
             customer_meals[i+1].update(is_rescheduled: true, reschedule_time: time)
           end
         end
-        Schedule.rescheduling(time)
+        # Schedule.rescheduling(time)
       end
     end
   end

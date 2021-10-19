@@ -3,11 +3,20 @@ class Chef < ApplicationRecord
 
   def cook_speed
     if skill == 1
-      speed = 1.1
+      speed = 1.2
     elsif skill == 2
-      speed = 1.0
+      speed = 1.1
     elsif skill == 3
-      speed = 0.9
+      speed = 1.0
+    end
+    return speed
+  end
+
+  def actual_cook_speed
+    random = rand(1..10)
+    speed = 1.0
+    if (skill == 1 && random >= 8) || (skill == 2 && random >= 9) || (skill == 3 && random == 10)
+      speed = (1.2 + rand(-0.15...0.15)).round(1)
     end
     return speed
   end

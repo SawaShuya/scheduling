@@ -14,7 +14,7 @@ class SchedulesController < ApplicationController
     while time <= end_time && i < 300 do
       time = time.round
       Schedule.every_process(time)
-      OrderedMeal.check_pace(time)
+      # OrderedMeal.check_pace(time)
       end_time = Schedule.maximum(:end_time).round
       time += 60
       i += 1
