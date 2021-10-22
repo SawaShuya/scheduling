@@ -13,8 +13,12 @@ class SchedulesController < ApplicationController
     i = 0
     while time <= end_time && i < 300 do
       time = time.round
-      Schedule.every_process(time)
-      # OrderedMeal.check_pace(time)
+      necessity_reschedule_for_cook_time = Schedule.every_process(time)
+      necessity_reschedule_for_ordered_meals = OrderedMeal.check_pace(time)
+      if necessity_reschedule_for_cook_time || necessity_reschedule_for_ordered_meals
+        Schedule.rescheduling(time, necessity_reschedule_for_cook_time, necessity_reschedule_for_ordered_meals)
+      end
+
       end_time = Schedule.maximum(:end_time).round
       time += 60
       i += 1

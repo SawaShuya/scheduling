@@ -63,9 +63,10 @@ class OrderedMeal < ApplicationRecord
   end
 
   def self.check_pace(time)
+    is_necessity = false
     ordered_meals = self.where(is_rescheduled: false, is_started: true).where.not(actual_served_time: nil)
     ordered_meals.each_with_index do |ordered_meal, j|
-      if ordered_meal.check_time == time && ordered_meal.meal_id != Meal.all.last.id
+      if ordered_meal.check_time.round == time && ordered_meal.meal_id != Meal.all.last.id
         average_velocity = ordered_meal.average_velocity
 
         customer_meals = ordered_meal.customer.ordered_meals.where(is_rescheduled: false, meal_id: ordered_meal.meal_id..8)
@@ -81,9 +82,11 @@ class OrderedMeal < ApplicationRecord
             customer_meals[i+1].update(is_rescheduled: true, reschedule_time: time)
           end
         end
+        is_necessity = true
         # Schedule.rescheduling(time)
       end
     end
+    return is_necessity
   end
 
   def self.reschedule_ordered_meal(next_ordered_meal, next_ideal_serve_time, average_velocity)
