@@ -28,15 +28,18 @@ class SchedulesController < ApplicationController
   end
 
   def show
-    @time = ProcessTime.now
-    @chefs = Chef.all
-    Schedule.every_process(@time)
-    OrderedMeal.check_pace(@time)
+    @time = ProcessTime.now.round
+    @chefs = Chef.all 
   end
 
   def next_time
-    next_time = ProcessTime.now + 60
+    next_time = (ProcessTime.now + 60).round
     ProcessTime.first.update(now: next_time)
+    necessity_reschedule_for_cook_time = Schedule.every_process(next_time)
+    necessity_reschedule_for_ordered_meals = OrderedMeal.check_pace(next_time)
+    if necessity_reschedule_for_cook_time || necessity_reschedule_for_ordered_meals
+      Schedule.rescheduling(next_time, necessity_reschedule_for_cook_time, necessity_reschedule_for_ordered_meals)
+    end
     redirect_to moment_path
   end
 

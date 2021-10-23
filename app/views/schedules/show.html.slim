@@ -2,57 +2,94 @@
   h3
     = @time.strftime("%H:%M")
 
-.next 
+.next.mb-5
   = link_to "next", next_time_path, method: :patch
+.back.mb-5 
+  = link_to "back", root_path
 
 .chef
-  .chef_display
-    - @chefs.each do |chef|
-      .card.mb-5
-        table.table
-          tr
-            th 
-              | シェフid 
-            td 
-              = chef.id 
-            td
-            td
-            td
-          tr 
-            th 
-              | 実行中の調理
-            td 
-              - schedule = chef.schedules.find_by('is_rescheduled = ? and start_time <= ? and end_time >= ?', false, @time, @time)
-              - if schedule.present?
-                = schedule.cook.meal.name 
-              - else 
-                | ------
-            td 
-              - if schedule.present?
-                = schedule.cook.name 
-            td 
-              - if schedule.present?
-                = "~" + schedule.end_time.strftime("%H:%M")
-            td 
-              - if schedule.present?
-                = schedule.cook.place.name
-          tr 
-            th 
-              | 次の調理
-            td 
-              - next_schedule = chef.schedules.where('is_rescheduled = ? and start_time > ?', false, @time).last
-              - if next_schedule.present?
-                = next_schedule.cook.meal.name 
-              - else 
-                | ------
-            td 
-              - if next_schedule.present?
-                = next_schedule.cook.name
-            td 
-              - if next_schedule.present?
-                = next_schedule.start_time.strftime("%H:%M") + "~"+  next_schedule.end_time.strftime("%H:%M")
+  - @chefs.each do |chef|
+    .card.mb-5.chef_display.container.shadow-sm
+      .row.chef-info.font-weight-bold.align-items-center
+        .col-2.text-center
+          | 料理人id 
+        .col-1
+          = chef.id 
+        .col-3
+          | { 料理人名 }
+        .col-4.text-right.time
+          = @time.strftime("%H:%M")
+        .col-1
 
-            td 
-              - if next_schedule.present?
-                = next_schedule.cook.place.name
+      .row.mb-5.cooks.border-top.pt-3
+        .col-2.pt-3.text-center
+          b 
+            | 調理中
+        .col
+          table.table.table-borderless
+            - schedules = chef.schedules.where(is_rescheduled: false, actual_end_time: nil).where.not(actual_start_time: nil).sort{|a, b| a.start_time <=> b.start_time}
+            - if schedules.blank?
+              tr 
+                td
+                  | -----------
+
+            - schedules.each do |schedule|
+              tr 
+                td
+                  = "(" + schedule.ordered_meal.customer_id.to_s + ")"
+                td  
+                  - if schedule.present?
+                    = schedule.cook.name
+                    br 
+                    = "【 " + schedule.cook.meal.name + " 】"
+                td 
+                  - if schedule.present?
+                    = "~" + schedule.end_time.strftime("%H:%M")
+                    br
+                    b.text-danger
+                      = "あと " + ((schedule.end_time - @time) / 60).round.to_s + "分"
+                    b 
+                      | で終了予定
+
+                td 
+                  - if schedule.present?
+                    = "@ " + schedule.cook.place.name
+                td 
+                  = link_to "完了", "#", class: "btn btn-success"
+
+      .row.cooks.border-top.pt-3
+        .col-2.pt-3.text-center
+          b 
+            | 次調理
+        .col
+          table.table.table-borderless
+            - next_schedules = chef.schedules.where('is_rescheduled = ? and start_time > ?', false, @time).last(2).sort{|a, b| a.start_time <=> b.start_time}
+            - if next_schedules.blank?
+              tr 
+                td
+                  | -----------
+            - next_schedules.each do |next_schedule|
+              tr
+                td 
+                  = "(" + next_schedule.ordered_meal.customer_id.to_s + ")"
+                td 
+                  - if next_schedule.present?
+                    = next_schedule.cook.name
+                    br
+                    = "【 " + next_schedule.cook.meal.name + " 】"
+                  - else 
+                    | ------
+
+                td 
+                  - if next_schedule.present?
+                    = next_schedule.start_time.strftime("%H:%M") + "~"+  next_schedule.end_time.strftime("%H:%M")
+                    br
+                    b
+                      | 開始まで 
+                    b.text-info
+                      = ((next_schedule.start_time - @time) / 60).round.to_s + "分"
+
+                td 
+                  - if next_schedule.present?
+                    = "@ " + next_schedule.cook.place.name
 

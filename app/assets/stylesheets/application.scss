@@ -17,3 +17,19 @@
 @import "bootstrap";
 @import 'font-awesome-sprockets';
 @import 'font-awesome';
+
+.chef_display {
+  height: 600px;
+  font-size: x-large;
+  background-color: rgb(252, 249, 255);
+}
+
+.chef-info {
+  height: 10%;
+  .time {
+    font-size: xx-large;
+  }
+}
+.cooks {
+  height: 45%;
+}
