@@ -45,13 +45,15 @@ class OutputsController < ApplicationController
 
       csv << []
       csv << [2, "スケジューリング"]
-      column_name = %W(シェフ 顧客id 料理名 調理id 順番 料理工程名 必要スキル 開始時間 終了時間 スケジュールid リスケ時間)
+      column_name = %W(シェフ 顧客id 料理名 調理id 順番 料理工程名 必要スキル 開始時間 終了時間 スケジュールid リスケ時間 実際の開始時間 実際の終了時間)
       csv << column_name
       chefs.each do |chef|
         schedules = chef.schedules.includes(:cook, :ordered_meal).sort{|a, b| a.start_time <=> b.start_time}
         schedules.each_with_index do |schedule, i|
           id = chef.id if i == 0
           reschedule_time = schedule.reschedule_time.strftime("%H:%M") if schedule.reschedule_time.present?
+          actual_start_time = schedule.actual_start_time.strftime("%H:%M") if schedule.actual_start_time
+          actual_end_time = schedule.actual_end_time.strftime("%H:%M") if schedule.actual_end_time
           column_values = [
             id,
             schedule.ordered_meal.customer_id,
@@ -63,7 +65,9 @@ class OutputsController < ApplicationController
             schedule.start_time.strftime("%H:%M"),
             schedule.end_time.strftime("%H:%M"),
             schedule.id,
-            reschedule_time
+            reschedule_time,
+            actual_start_time,
+            actual_end_time
           ]
           csv << column_values
         end
