@@ -61,7 +61,7 @@ class Schedule < ApplicationRecord
 
       is_startable = check_startable(last_schedule, last_ahead_cook_schedule)
 
-      if schedule.is_free || is_startable
+      if schedule.is_free || is_startable && schedule.ordered_meal.customer.is_visited?(time)
         schedule.update(actual_start_time: time.round)
         if schedule.cook.permutation == 1
           schedule.ordered_meal.update(is_started: true)
@@ -88,7 +88,7 @@ class Schedule < ApplicationRecord
     return is_necessity
   end
 
-  def self.rescheduling(time, necessity_reschedule_for_cook_time, necessity_reschedule_for_ordered_meals)
+  def self.rescheduling(time, necessity_reschedule_for_visit_time, necessity_reschedule_for_cook_time, necessity_reschedule_for_ordered_meals)
 
     if necessity_reschedule_for_cook_time
       started_ordered_meal_ids = OrderedMeal.where(is_rescheduled: false, is_started: true, actual_served_time: nil).pluck(:id)
@@ -96,7 +96,7 @@ class Schedule < ApplicationRecord
 
       ordered_meal_ids = OrderedMeal.where(is_rescheduled: false, is_started: false)
 
-    elsif !necessity_reschedule_for_cook_time && necessity_reschedule_for_ordered_meals
+    elsif necessity_reschedule_for_ordered_meals || necessity_reschedule_for_visit_time
       margin_time = 5
       recent_orderd_meal_ids = []
       recent_schedules = Schedule.where(is_rescheduled: false, start_time: time..(time + margin_time * 60)).includes(:cook)

@@ -13,10 +13,11 @@ class SchedulesController < ApplicationController
     i = 0
     while time <= end_time && i < 300 do
       time = time.round
+      necessity_reschedule_for_visit_time = Customer.check_visit(time)
       necessity_reschedule_for_cook_time = Schedule.every_process(time)
       necessity_reschedule_for_ordered_meals = OrderedMeal.check_pace(time)
-      if necessity_reschedule_for_cook_time || necessity_reschedule_for_ordered_meals
-        Schedule.rescheduling(time, necessity_reschedule_for_cook_time, necessity_reschedule_for_ordered_meals)
+      if necessity_reschedule_for_cook_time || necessity_reschedule_for_ordered_meals || necessity_reschedule_for_visit_time
+        Schedule.rescheduling(time, necessity_reschedule_for_visit_time, necessity_reschedule_for_cook_time, necessity_reschedule_for_ordered_meals)
       end
 
       end_time = Schedule.maximum(:end_time).round
@@ -35,6 +36,7 @@ class SchedulesController < ApplicationController
   def next_time
     next_time = (ProcessTime.now + 60).round
     ProcessTime.first.update(now: next_time)
+  
     necessity_reschedule_for_cook_time = Schedule.every_process(next_time)
     necessity_reschedule_for_ordered_meals = OrderedMeal.check_pace(next_time)
     if necessity_reschedule_for_cook_time || necessity_reschedule_for_ordered_meals

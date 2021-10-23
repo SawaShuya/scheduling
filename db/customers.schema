@@ -1,7 +1,7 @@
 create_table "customers", force: :cascade do |t|
   t.integer :style_id
   t.time :reserved_time
-  t.time :finish_time
+  t.time :actual_visit_time
   t.float :velocity_params
   
   t.datetime :created_at
