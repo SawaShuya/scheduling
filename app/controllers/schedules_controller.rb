@@ -9,7 +9,7 @@ class SchedulesController < ApplicationController
 
   def active
     time = ProcessTime.now
-    end_time = Schedule.maximum(:end_time).round
+    end_time = (Schedule.maximum(:end_time) + 600).round
     i = 0
     while time <= end_time && i < 300 do
       time = time.round
@@ -20,12 +20,15 @@ class SchedulesController < ApplicationController
         Schedule.rescheduling(time, necessity_reschedule_for_visit_time, necessity_reschedule_for_cook_time, necessity_reschedule_for_ordered_meals)
       end
 
-      end_time = Schedule.maximum(:end_time).round
+      end_time = (Schedule.maximum(:end_time) + 600).round
       time += 60
       i += 1
     end
+    time_satisfaction = OrderedMeal.time_satisfaction
+    wort_time_balance = Chef.wort_time_balance
+    Evaluate.create(time_satisfaction: time_satisfaction, wort_time_balance: wort_time_balance)
     ProcessTime.first.update(now: end_time.round)
-    redirect_to root_path
+    # redirect_to root_path
   end
 
   def show
@@ -52,7 +55,7 @@ class SchedulesController < ApplicationController
     ordered_meal_ids = OrderedMeal.all.pluck(:id)
     Schedule.backward_scheduling(nil, false, ordered_meal_ids)
     ProcessTime.set_zero_time
-    redirect_to root_path
+    # redirect_to root_path
   end
 
   def reset_ordered_meal
@@ -63,6 +66,15 @@ class SchedulesController < ApplicationController
     Schedule.backward_scheduling(nil, false, ordered_meal_ids)
     ProcessTime.set_zero_time
     redirect_to root_path
+  end
+
+  def repetition
+    repetition_count = 10
+
+    for i in 1..repetition_count do
+      reset_all
+      active
+    end
   end
 
 end

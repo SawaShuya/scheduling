@@ -83,7 +83,6 @@ class OrderedMeal < ApplicationRecord
           end
         end
         is_necessity = true
-        # Schedule.rescheduling(time)
       end
     end
     return is_necessity
