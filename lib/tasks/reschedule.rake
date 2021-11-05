@@ -14,4 +14,9 @@ namespace :reschedule do
     end
     ProcessTime.first.update(now: end_time)
   end
+
+  desc '繰り返し'
+  task :repitation => :environment do
+    SchedulesController.new.repetition
+  end
 end

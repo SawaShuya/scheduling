@@ -1,5 +1,17 @@
 class OutputsController < ApplicationController
   require 'csv'
+
+  def send_csv_evaluates
+    evaluates = Evaluate.all
+    csv_data = CSV.generate(encoding: Encoding::SJIS) do |csv| 
+      csv << ["時間満足度", "作業時間平滑度"]
+      evaluates.each do |evaluate|
+        csv << [evaluate.time_satisfaction, evaluate.wort_time_balance]
+      end
+    end
+    time = Time.current.strftime("%Y%m%d%H%M")
+    send_data(csv_data, filename: time + "_evaluates.csv")
+  end
   
   def send_csv
     chefs = Chef.all

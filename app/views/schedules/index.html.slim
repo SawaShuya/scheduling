@@ -9,6 +9,9 @@ h1
   = link_to "go to moment", moment_path
 .csv-buttun.mb-2
   = link_to "create CSV", post_csv_path, method: :post
+.csv-buttun.mb-2 
+  = link_to "create CSV evaluates", post_csv_evaluates_path, method: :post
+
 .setting
   .mb-2
     = link_to "reset all", reset_all_path, method: :patch

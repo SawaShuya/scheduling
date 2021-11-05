@@ -16,6 +16,7 @@ class SchedulesController < ApplicationController
       necessity_reschedule_for_visit_time = Customer.check_visit(time)
       necessity_reschedule_for_cook_time = Schedule.every_process(time)
       necessity_reschedule_for_ordered_meals = OrderedMeal.check_pace(time)
+      # necessity_reschedule_for_cook_time = false
       if necessity_reschedule_for_cook_time || necessity_reschedule_for_ordered_meals || necessity_reschedule_for_visit_time
         Schedule.rescheduling(time, necessity_reschedule_for_visit_time, necessity_reschedule_for_cook_time, necessity_reschedule_for_ordered_meals)
       end
@@ -25,7 +26,7 @@ class SchedulesController < ApplicationController
       i += 1
     end
     time_satisfaction = OrderedMeal.time_satisfaction
-    wort_time_balance = Chef.wort_time_balance
+    wort_time_balance = Chef.work_time_balance
     Evaluate.create(time_satisfaction: time_satisfaction, wort_time_balance: wort_time_balance)
     ProcessTime.first.update(now: end_time.round)
     # redirect_to root_path

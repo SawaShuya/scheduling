@@ -27,19 +27,49 @@ class Chef < ApplicationRecord
     end
   end
 
-  def self.wort_time_balance
-    0
+  def self.work_time_balance
+    
+    time = Schedule.where(is_rescheduled:false).minimum(:actual_start_time).round
+    last_time = Schedule.where(is_rescheduled:false).maximum(:actual_end_time).round
+    chef_number = Chef.all.last.id
+    work_times = Array.new(chef_number, 0)
+    while time != last_time do
+      just_time_schedules = Schedule.where(is_rescheduled: false).where('actual_end_time > ? and ? > actual_start_time', time, time)
+      if just_time_schedules.present?
+        chef_ids = just_time_schedules.pluck(:chef_id).uniq.sort
+        chef_ids.each do |chef_id|
+          work_times[chef_id - 1] += 1
+        end
+      end
+      time = (time + 60).round
+    end
+    work_times.compact!
+    wort_time_balance = calculate_work_time_balance(work_times)
+    return wort_time_balance 
   end
 
-  def has_overlaps?(start_time, end_time)
-    self.schedules.where(is_free: false, is_rescheduled: false).where('end_time > ? and ? > start_time', start_time, end_time).exists?
+  def self.calculate_work_time_balance(work_times)
+    sum = work_times.sum
+    average = sum / work_times.length
+    @difference_sum = 0
+
+    work_times.each do |work_time|
+      difference = (work_time - average).abs
+      @difference_sum += difference
+    end
+
+    return @difference_sum
+  end
+
+  def has_overlaps?(time, start_time, end_time)
+    (time.blank? || start_time >= time) && self.schedules.where(is_free: false, is_rescheduled: false).where('end_time > ? and ? > start_time', start_time, end_time).exists?
   end
 
   def rescheduled_schedules(ordered_meal_ids)
     self.schedules.where(is_free: false, is_rescheduled: false, ordered_meal_id: [ordered_meal_ids])
   end
 
-  def self.search(start_time, end_time, skill, is_free, ordered_meal_ids)
+  def self.search(time, start_time, end_time, skill, is_free, ordered_meal_ids)
     # chefs = self.where(skill: skill.to_i..3).sort{|a, b| a.skill <=> b.skill}
     chefs = self.where(skill: skill.to_i..3).sort{|a, b| a.work_time <=> b.work_time}
     @end_time, @tmp_end_time = end_time, end_time
@@ -51,11 +81,11 @@ class Chef < ApplicationRecord
       @chef = chefs.first
     else
       chefs.each do |chef|
-        if chef.has_overlaps?(start_time, end_time)
+        if chef.has_overlaps?(time, start_time, end_time)
           min_end_time = chef.rescheduled_schedules(ordered_meal_ids).minimum(:start_time)
           if min_end_time.present? && min_end_time < end_time
             min_start_time = (min_end_time - cook_time).round
-            if !chef.has_overlaps?(min_start_time, min_end_time) && (@end_time == end_time || @end_time < min_end_time)
+            if !chef.has_overlaps?(time, min_start_time, min_end_time) && (@end_time == end_time || @end_time < min_end_time)
               @end_time = min_end_time
               @chef = chef
             end

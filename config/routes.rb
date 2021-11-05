@@ -8,5 +8,6 @@ Rails.application.routes.draw do
   patch "schedules/repetition" => "schedules#repetition", as: "repetition"
 
   post "outputs" => "outputs#send_csv", as: "post_csv"
+  post "outputs/evaluates" => "outputs#send_csv_evaluates", as: "post_csv_evaluates"
   patch "active" => "schedules#active", as: "active"
 end

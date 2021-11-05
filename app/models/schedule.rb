@@ -164,7 +164,7 @@ class Schedule < ApplicationRecord
 
       start_time = end_time - cook.time * 60
 
-      chef, @ajusted_end_time, is_overlapped = Chef.search(start_time.round, end_time.round, cook.skill, cook.is_free, ordered_meal_ids)
+      chef, @ajusted_end_time, is_overlapped = Chef.search(time, start_time.round, end_time.round, cook.skill, cook.is_free, ordered_meal_ids)
       @ajusted_start_time = @ajusted_end_time - (cook.time * chef.cook_speed).round * 60
       # @ajusted_start_time = @ajusted_end_time - cook.time.round * 60
       
@@ -177,7 +177,7 @@ class Schedule < ApplicationRecord
       end
 
       if is_overlapped
-        forward_scheduling(new_schedule, ordered_meal_ids)
+        forward_scheduling(time, new_schedule, ordered_meal_ids)
       end
 
 
@@ -216,10 +216,6 @@ class Schedule < ApplicationRecord
         staging_cooks.delete_at(index)
       end
     end
-
-    # if max_time_diff != 0
-    #   time_shift(ordered_meal_ids, max_time_diff)
-    # end
   end
 
 
@@ -263,7 +259,7 @@ class Schedule < ApplicationRecord
     end
   end
 
-  def self.forward_scheduling(new_schedule, ordered_meal_ids)
+  def self.forward_scheduling(time, new_schedule, ordered_meal_ids)
     staging_schedule = [new_schedule]
     chef_schedule = []
     chef = new_schedule.chef
@@ -275,6 +271,8 @@ class Schedule < ApplicationRecord
       #   chef_schedule[chef.id - 1].unshift(new_schedule.id)
       # end
     end
+
+
 
     while staging_schedule.length != 0 do
       schedule = staging_schedule[0]
@@ -291,6 +289,10 @@ class Schedule < ApplicationRecord
         if last_schedules.present? && schedule.start_time < last_schedules.maximum(:end_time) && (last_end_time.blank? || last_end_time < last_schedules.maximum(:end_time))
           last_end_time = last_schedules.maximum(:end_time)
         end
+      end
+
+      if schedule.start_time <= time && (last_end_time.blank? || last_end_time < time)
+        last_end_time = time
       end
 
       if last_end_time.present? && last_end_time > schedule.start_time
