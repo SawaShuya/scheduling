@@ -17,7 +17,7 @@ class SchedulesController < ApplicationController
       necessity_reschedule_for_cook_time = Schedule.every_process(time)
       necessity_reschedule_for_ordered_meals = OrderedMeal.check_pace(time)
       # necessity_reschedule_for_cook_time = false
-      # necessity_reschedule_for_ordered_meals = false
+      necessity_reschedule_for_ordered_meals = false
       if necessity_reschedule_for_cook_time || necessity_reschedule_for_ordered_meals || necessity_reschedule_for_visit_time
         Schedule.rescheduling(time, necessity_reschedule_for_visit_time, necessity_reschedule_for_cook_time, necessity_reschedule_for_ordered_meals)
       end
