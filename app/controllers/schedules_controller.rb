@@ -4,19 +4,20 @@ class SchedulesController < ApplicationController
   def index
     @chefs = Chef.all
     @customers = Customer.all.includes(:style).sort{|a, b| a.reserved_time <=> b.reserved_time}
-    @time_satisfaction = OrderedMeal.time_satisfaction
+    # @time_satisfaction = OrderedMeal.time_satisfaction
   end
 
   def active
     time = ProcessTime.now
     end_time = (Schedule.maximum(:end_time) + 600).round
     i = 0
-    while time <= end_time && i < 300 do
+    while time <= end_time && i < 500 do
       time = time.round
       necessity_reschedule_for_visit_time = Customer.check_visit(time)
       necessity_reschedule_for_cook_time = Schedule.every_process(time)
       necessity_reschedule_for_ordered_meals = OrderedMeal.check_pace(time)
       # necessity_reschedule_for_cook_time = false
+      # necessity_reschedule_for_ordered_meals = false
       if necessity_reschedule_for_cook_time || necessity_reschedule_for_ordered_meals || necessity_reschedule_for_visit_time
         Schedule.rescheduling(time, necessity_reschedule_for_visit_time, necessity_reschedule_for_cook_time, necessity_reschedule_for_ordered_meals)
       end

@@ -97,7 +97,7 @@ class Schedule < ApplicationRecord
       ordered_meal_ids = OrderedMeal.where(is_rescheduled: false, is_started: false)
 
     elsif necessity_reschedule_for_ordered_meals || necessity_reschedule_for_visit_time
-      margin_time = 5
+      margin_time = 0
       recent_orderd_meal_ids = []
       recent_schedules = Schedule.where(is_rescheduled: false, start_time: time..(time + margin_time * 60)).includes(:cook)
 
