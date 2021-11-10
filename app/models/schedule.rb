@@ -56,7 +56,7 @@ class Schedule < ApplicationRecord
     schedules.each do |schedule|
       chef = schedule.chef
 
-      last_schedule = chef.schedules.where(is_rescheduled: false, is_free: false).where('start_time < ?', schedule.start_time.round).sort{|a, b| a.start_time <=> b.start_time}.last
+      last_schedule = chef.schedules.where(is_rescheduled: false, is_free: false).where('start_time <= ?', schedule.start_time.round).where.not(id: schedule.id).sort{|a, b| a.start_time <=> b.start_time}.last
       last_ahead_cook_schedule = schedule.last_ahead_cook if schedule.cook.ahead_cooks.present?
 
       is_startable = check_startable(last_schedule, last_ahead_cook_schedule)
@@ -99,7 +99,7 @@ class Schedule < ApplicationRecord
     elsif necessity_reschedule_for_ordered_meals || necessity_reschedule_for_visit_time
       margin_time = 0
       recent_orderd_meal_ids = []
-      recent_schedules = Schedule.where(is_rescheduled: false, start_time: time..(time + margin_time * 60)).includes(:cook)
+      recent_schedules = Schedule.where(is_rescheduled: false, start_time: time..(time + margin_time * 60)).includes(:cook) if margin_time != 0
 
       if recent_schedules.present?
         recent_schedules.each do |schedule|
@@ -291,8 +291,8 @@ class Schedule < ApplicationRecord
         end
       end
 
-      if schedule.start_time <= time && (last_end_time.blank? || last_end_time < time)
-        last_end_time = time
+      if time.present? && schedule.start_time < time && (last_end_time.blank? || last_end_time < time)
+        last_end_time = time + 60
       end
 
       if last_end_time.present? && last_end_time > schedule.start_time

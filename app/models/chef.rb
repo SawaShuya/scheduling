@@ -62,11 +62,15 @@ class Chef < ApplicationRecord
   end
 
   def has_overlaps?(time, start_time, end_time)
-    (time.blank? || start_time >= time) && self.schedules.where(is_free: false, is_rescheduled: false).where('end_time > ? and ? > start_time', start_time, end_time).exists?
+    (time.present? && start_time < time) || self.schedules.where(is_free: false, is_rescheduled: false).where('end_time > ? and ? > start_time', start_time.round, end_time.round).exists?
   end
 
   def rescheduled_schedules(ordered_meal_ids)
     self.schedules.where(is_free: false, is_rescheduled: false, ordered_meal_id: [ordered_meal_ids])
+  end
+
+  def asigned_schedules
+    self.schedules.where(is_rescheduled: false, is_free: false).where('rescheduled_time < ?', time.round).or(self.schedules.where(is_rescheduled: false, is_free: false, rescheduled_time: nil))
   end
 
   def self.search(time, start_time, end_time, skill, is_free, ordered_meal_ids)
@@ -89,9 +93,6 @@ class Chef < ApplicationRecord
               @end_time = min_end_time
               @chef = chef
             end
-          elsif min_end_time.present? && end_time > min_end_time && (@tmp_end_time == end_time || @tmp_end_time < min_end_time)
-            @tmp_end_time = min_end_time
-            @tmp_chef = chef
           end
         else
           @chef = chef
@@ -103,13 +104,8 @@ class Chef < ApplicationRecord
 
     if @chef.blank?
       is_overlapped = true
-      if @tmp_chef.present?
-        @end_time = @tmp_end_time
-        @chef = @tmp_chef
-      else
-        @chef = chefs.first
-        @end_time = @chef.rescheduled_schedules(ordered_meal_ids).minimum(:start_time) || end_time
-      end
+      @chef = chefs.first
+      @end_time = [@chef.rescheduled_schedules(ordered_meal_ids).minimum(:start_time), end_time].min
     end
 
     return @chef, @end_time, is_overlapped

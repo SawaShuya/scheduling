@@ -71,7 +71,7 @@ class SchedulesController < ApplicationController
   end
 
   def repetition
-    repetition_count = 10
+    repetition_count = 1
 
     for i in 1..repetition_count do
       reset_all
