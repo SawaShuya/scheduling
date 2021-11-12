@@ -80,7 +80,7 @@ class Schedule < ApplicationRecord
         if schedule.cook.is_last
           schedule.ordered_meal.update(actual_served_time: time.round)
         end
-        if (time - schedule.actual_end_time) > limit_overlap_time
+        if (time - schedule.end_time) > limit_overlap_time
           is_necessity = true
         end
       end
@@ -92,7 +92,15 @@ class Schedule < ApplicationRecord
 
     if necessity_reschedule_for_cook_time
       started_ordered_meal_ids = OrderedMeal.where(is_rescheduled: false, is_started: true, actual_served_time: nil).pluck(:id)
-      exclude_schedule_ids = Schedule.where(is_rescheduled: false, ordered_meal_id: [started_ordered_meal_ids], actual_start_time: nil).pluck(:id)
+      include_schedule_ids = Schedule.where(is_rescheduled: false, ordered_meal_id: [started_ordered_meal_ids], actual_start_time: nil).pluck(:id)
+
+      replace_schedules = Schedule.where(is_rescheduled: false, ordered_meal_id: [started_ordered_meal_ids]).where.not(actual_start_time: nil)
+      replace_schedules.each do |schedule|
+        new_schedule_params = schedule.attributes.reject{|key, value| key == "id" || key == "created_at" || key == "updated_at" || key == "is_rescheduled"}
+        new_schedule_params.merge!({reschedule_time: time.round, is_rescheduled: false})
+        Schedule.create!(new_schedule_params)
+        schedule.update(is_rescheduled: true)
+      end
 
       ordered_meal_ids = OrderedMeal.where(is_rescheduled: false, is_started: false)
 
@@ -109,28 +117,30 @@ class Schedule < ApplicationRecord
         end
       end
 
-      replace_orderd_meals = OrderedMeal.where(id: [recent_orderd_meal_ids]).or(OrderedMeal.where(is_started: true, actual_served_time: nil, is_rescheduled: true))
+      replace_orderd_meals = OrderedMeal.where(id: [recent_orderd_meal_ids]).or(OrderedMeal.where(is_started: true, actual_served_time: nil, is_rescheduled: true)).sort{|a, b| b.id <=> a.id }
       replace_orderd_meals.each do |replace_ordered_meal|
         ordered_meal = OrderedMeal.find_by(customer_id: replace_ordered_meal.customer_id, meal_id: replace_ordered_meal.meal_id, is_rescheduled: false)
-        replace_ordered_meal.schedules.where(is_rescheduled: false).each do |schedule|
-          new_schedule_params = schedule.attributes.reject{|key, value| key == "id" || key == "created_at" || key == "updated_at" || key == "ordered_meal_id" || key == "is_rescheduled"}
-          new_schedule_params.merge!({ordered_meal_id: ordered_meal.id, reschedule_time: time.round, is_rescheduled: false})
-          Schedule.create!(new_schedule_params)
-          schedule.update(is_rescheduled: true) 
+        if ordered_meal.schedules.blank?
+          replace_ordered_meal.schedules.where(is_rescheduled: false).each do |schedule|
+            new_schedule_params = schedule.attributes.reject{|key, value| key == "id" || key == "created_at" || key == "updated_at" || key == "ordered_meal_id" || key == "is_rescheduled"}
+            new_schedule_params.merge!({ordered_meal_id: ordered_meal.id, reschedule_time: time.round, is_rescheduled: false})
+            Schedule.create!(new_schedule_params)
+            schedule.update(is_rescheduled: true) 
+          end
         end
         if recent_orderd_meal_ids.include?(replace_ordered_meal.id)
           recent_orderd_meal_ids << ordered_meal.id
         end
       end
       ordered_meal_ids = OrderedMeal.where(is_started: false).pluck(:id) - recent_orderd_meal_ids
-      exclude_schedule_ids = []
+      include_schedule_ids = []
     end
 
-    backward_scheduling(time, true, ordered_meal_ids, exclude_schedule_ids)
+    backward_scheduling(time, true, ordered_meal_ids, include_schedule_ids)
   end
 
-  def self.staging_reschedule(ordered_meal_ids, *exclude_schedule_ids)
-    schedules = Schedule.where(ordered_meal_id: [ordered_meal_ids], is_rescheduled: false).where.not(id: [exclude_schedule_ids])
+  def self.staging_reschedule(ordered_meal_ids, *include_schedule_ids)
+    schedules = Schedule.where(ordered_meal_id: [ordered_meal_ids], is_rescheduled: false).or(where(id: [include_schedule_ids]))
     schedules.each do |schedule|
       unless schedule.is_rescheduled
         schedule.update(is_rescheduled: true)
@@ -140,9 +150,9 @@ class Schedule < ApplicationRecord
     end
   end
 
-  def self.backward_scheduling(time, is_rescheduling, ordered_meal_ids, *exclude_schedule_ids)
+  def self.backward_scheduling(time, is_rescheduling, ordered_meal_ids, *include_schedule_ids)
     
-    staging_reschedule(ordered_meal_ids, exclude_schedule_ids)
+    staging_reschedule(ordered_meal_ids, include_schedule_ids)
    
     customers = Customer.all
     staging_cooks = []
@@ -221,34 +231,14 @@ class Schedule < ApplicationRecord
 
   def search_not_assigned_schedule(customer)
     next_cook = nil
-    schedules = customer.ordered_meals.schedules(is_rescheduled: true)
+    schedules = customer.ordered_meals.schedules(is_rescheduled: false)
     if schedules.count != Cook.all.count
-      not_assigned_schedule_ids = Cook.all.pluck(:id) - schedule.pluck(:cook_id)
+      not_assigned_schedule_ids = Cook.all.pluck(:id) - schedules.pluck(:cook_id)
       next_cook = Cook.find(not_assigned_schedule_ids.last)
     end
     return next_cook
 
   end
-
-  def self.check_overlaps(chef, start_time, schedule_end_time, ordered_meal_ids)
-    end_time = chef.schedules.where(is_free: false, is_rescheduled: false, ordered_meal_id: [ordered_meal_ids]).minimum(:start_time)
-    if end_time.blank?
-      end_time = schedule_end_time
-    end
-    overlaps = chef.schedules.where(is_free: false, is_rescheduled: false).where('end_time > ? and ? > start_time', start_time, end_time)
-    if overlaps.present?
-      @overlap_time = 0
-      overlaps.each do |schedule|
-        tmp_overlap_time = schedule.end_time - start_time
-        if @overlap_time < tmp_overlap_time
-          @overlap_time = tmp_overlap_time
-        end
-      end
-    end
-
-    return @overlap_time
-  end
-
 
   def self.time_shift(ordered_meal_ids, shift_time)
     update_data = Schedule.where(ordered_meal_id: [ordered_meal_ids], is_rescheduled: false)
@@ -260,80 +250,82 @@ class Schedule < ApplicationRecord
   end
 
   def self.forward_scheduling(time, new_schedule, ordered_meal_ids)
+    i = 0
     staging_schedule = [new_schedule]
     chef_schedule = []
     chef = new_schedule.chef
     chefs = Chef.all
     chefs.each do |chef|
       chef_schedule << chef.schedules.where(is_rescheduled: false, ordered_meal_id: [ordered_meal_ids]).sort{|a, b| [a.start_time, - a.id] <=> [b.start_time, - b.id]}.pluck(:id)
-      # chef_schedule << chef.schedules.where(is_rescheduled: false, is_free: false).where('start_time > ?', new_schedule.start_time).sort{|a, b| a.start_time <=> b.start_time}.pluck(:id)
-      # if chef == new_schedule.chef
-      #   chef_schedule[chef.id - 1].unshift(new_schedule.id)
-      # end
     end
 
-
-
     while staging_schedule.length != 0 do
+      i+=1
+      if i >= 100
+        puts "error"
+        p staging_schedule.map{|a| [a.id, a.ordered_meal_id, a.cook_id, a.chef_id, a.start_time]}
+      end
       schedule = staging_schedule[0]
-      chef = schedule.chef
-      last_end_time = nil
 
-      overlap_schedules = chef.schedules.where(is_free: false, is_rescheduled: false).where('end_time > ? and ? > start_time', schedule.start_time.round, schedule.end_time.round).where.not(id: schedule.id)
-      if !schedule.is_free && overlap_schedules.exists? && (last_end_time.blank? || last_end_time < overlap_schedules.maximum(:end_time))
-        last_end_time = overlap_schedules.maximum(:end_time)
-      end
+      limit_time = check_overlaps(time, chef_schedule, schedule)
 
-      if schedule.cook.ahead_cooks.present?
-        last_schedules = Schedule.where(is_rescheduled: false, ordered_meal_id: schedule.ordered_meal_id ,cook_id: schedule.cook.ahead_cooks.pluck(:id))
-        if last_schedules.present? && schedule.start_time < last_schedules.maximum(:end_time) && (last_end_time.blank? || last_end_time < last_schedules.maximum(:end_time))
-          last_end_time = last_schedules.maximum(:end_time)
+      if limit_time >= schedule.start_time.round
+        if limit_time == time
+          limit_time += 60
         end
-      end
-
-      if time.present? && schedule.start_time < time && (last_end_time.blank? || last_end_time < time)
-        last_end_time = time + 60
-      end
-
-      if last_end_time.present? && last_end_time > schedule.start_time
-        overlap_time = last_end_time - schedule.start_time
+        overlap_time = limit_time - schedule.start_time
         ajust_start_time = schedule.start_time + overlap_time
         ajust_end_time = schedule.end_time + overlap_time
-        if !schedule.is_free && chef.schedules.where(is_free: false, is_rescheduled: false).where('end_time > ? and ? > start_time', ajust_start_time.round, ajust_end_time.round).where.not(ordered_meal_id: [ordered_meal_ids]).exists?
-          last_end_time = chef.schedules.where(is_free: false, is_rescheduled: false).where.not(ordered_meal_id: [ordered_meal_ids]).maximum(:end_time)
-          overlap_time = last_end_time - schedule.start_time
-          ajust_start_time = schedule.start_time + overlap_time
-          ajust_end_time = schedule.end_time + overlap_time
-          if chef.schedules.where(is_free: false, is_rescheduled: false).where('end_time > ? and ? > start_time', ajust_start_time.round, ajust_end_time.round).where.not(id: schedule.id).exists?
-            last_end_time = chef.schedules.where(is_free: false, is_rescheduled: false).where('end_time > ? and ? > start_time', ajust_start_time.round, ajust_end_time.round).where.not(id: schedule.id).maximum(:end_time)
-            overlap_time = last_end_time - schedule.start_time
-            ajust_start_time = schedule.start_time + overlap_time
-            ajust_end_time = schedule.end_time + overlap_time
-          end
-        end
-
         schedule.update(start_time: ajust_start_time.round, end_time: ajust_end_time.round)
-      
-
-        schedule_index = chef_schedule[chef.id - 1].index(schedule.id)
-        if schedule_index.present? && chef_schedule[chef.id - 1][schedule_index + 1].present?
-          staging_schedule << Schedule.find(chef_schedule[chef.id - 1][schedule_index + 1])
-        end
-
-        if schedule.cook.rear_cooks.present?
-          staging_schedule << Schedule.find_by(is_rescheduled: false, ordered_meal_id: schedule.ordered_meal_id, cook_id: schedule.cook.rear_cooks.first.id)
-        end
-      elsif schedule.is_free
-        schedule_index = chef_schedule[chef.id - 1].index(schedule.id)
-        if schedule_index.present? && chef_schedule[chef.id - 1][schedule_index + 1].present?
-          staging_schedule << Schedule.find(chef_schedule[chef.id - 1][schedule_index + 1])
-        end
+        next_staging_schedules = set_next_staging_schedules(chef_schedule, schedule)
+        staging_schedule.concat next_staging_schedules
       end
 
       staging_schedule.shift
-      staging_schedule.sort!{|a, b| a.start_time <=> b.start_time}
+      staging_schedule.sort!{|a, b| [a.start_time, - a.id] <=> [b.start_time, - b.id]}
       staging_schedule.uniq!
+
     end
   end
+
+  def self.check_overlaps(time, chef_schedule, schedule)
+    limit_times = []
+    limit_times << time.round
+
+    schedule_index = chef_schedule[schedule.chef_id - 1].index(schedule.id)
+    if !schedule.is_free && schedule_index.present? && schedule_index != 0
+      last_schedule = Schedule.find(chef_schedule[schedule.chef_id - 1][schedule_index - 1])
+      limit_times << last_schedule.end_time.round
+    end
+
+    if schedule.cook.ahead_cooks.present?
+      ahead_schedules = Schedule.where(is_rescheduled: false, ordered_meal_id: schedule.ordered_meal_id ,cook_id: schedule.cook.ahead_cooks.pluck(:id))
+      if ahead_schedules.present?
+        limit_times << ahead_schedules.maximum(:end_time).round
+      end
+    end
+
+    limit_time = limit_times.compact.max
+
+    return limit_time 
+  end
+
+  def self.set_next_staging_schedules(chef_schedule, schedule)
+    staging_schedules = []
+    schedule_index = chef_schedule[schedule.chef_id - 1].index(schedule.id)
+
+    if !schedule.is_free && schedule_index.present?
+      next_schedule = Schedule.find_by(id: chef_schedule[schedule.chef_id - 1][schedule_index + 1])
+      staging_schedules << next_schedule
+    end
+    if schedule.cook.rear_cooks.present?
+      rear_cook = Schedule.find_by(is_rescheduled: false, ordered_meal_id: schedule.ordered_meal_id, cook_id: schedule.cook.rear_cooks.first.id)
+      staging_schedules << rear_cook
+    end
+
+    return staging_schedules.compact
+  end
+
+  
 
 end

@@ -107,6 +107,11 @@ class Chef < ApplicationRecord
       @chef = chefs.first
       @end_time = [@chef.rescheduled_schedules(ordered_meal_ids).minimum(:start_time), end_time].min
     end
+    
+    start_time = @end_time - cook_time
+    if time.present? && start_time <= time.round
+      is_overlapped = true
+    end
 
     return @chef, @end_time, is_overlapped
   end
