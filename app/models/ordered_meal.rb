@@ -15,20 +15,10 @@ class OrderedMeal < ApplicationRecord
       meal_ids.each do |meal_id|
         ordered_meal = OrderedMeal.where(meal_id: meal_id, customer_id: customer_id).last
         actual_ordered_meal = OrderedMeal.find_by(meal_id: meal_id, customer_id: customer_id, is_rescheduled: false)
-        # byebug
         
         sum += ((ordered_meal.ideal_served_time - actual_ordered_meal.actual_served_time)/60) ** 2
       end
     end
-    # self.where(is_rescheduled: false).each do |ordered_meal|
-    #   if self.finish_all?
-    #     surve_time = ordered_meal.actual_served_time
-    #   else
-    #     surve_time = ordered_meal.schedules.first.end_time
-    #   end
-    #   sum += ((ordered_meal.ideal_served_time - surve_time)/60) ** 2
-    # end
-
     return sum
   end
 

@@ -22,20 +22,27 @@ class Schedule < ApplicationRecord
 
   def last_ahead_cook
     ahead_cooks = Schedule.where(is_rescheduled: false, ordered_meal_id: self.ordered_meal_id, cook_id: self.cook.ahead_cooks.pluck(:id))
-    if ahead_cooks.where(actual_end_time: nil).blank?
-      ahead_cook = ahead_cooks.sort{|a, b| a.actual_end_time <=> b.actual_end_time}.last
+    if ahead_cooks.where(actual_end_time: nil).present?
+      ahead_cook = ahead_cooks.where(actual_end_time: nil).sort{|a, b| a.actual_end_time <=> b.actual_end_time}.last
     else
-      ahead_cook = ahead_cooks.find_by(actual_end_time: nil)
+      ahead_cook = ahead_cooks.sort{|a, b| a.actual_end_time <=> b.actual_end_time}.last
     end
     
     return ahead_cook
   end
 
-  def self.check_startable(last_schedule, last_ahead_schedule)
+  def self.check_startable(schedule, last_schedule, last_ahead_schedule)
     is_startable = false
-    if (last_schedule && last_ahead_schedule && last_schedule.is_finished? && last_ahead_schedule.is_finished?) || (!last_schedule && last_ahead_schedule && last_ahead_schedule.is_finished?) || (last_schedule && !last_ahead_schedule && last_schedule.is_finished?) || (!last_schedule && !last_ahead_schedule)
-      is_startable = true
+    if schedule.is_free
+      if (last_ahead_schedule && last_ahead_schedule.is_finished?) || !last_ahead_schedule
+        is_startable = true
+      end
+    else
+      if (last_schedule && last_ahead_schedule && last_schedule.is_finished? && last_ahead_schedule.is_finished?) || (!last_schedule && last_ahead_schedule && last_ahead_schedule.is_finished?) || (last_schedule && !last_ahead_schedule && last_schedule.is_finished?) || (!last_schedule && !last_ahead_schedule)
+        is_startable = true
+      end
     end
+
 
     return is_startable
 
@@ -59,11 +66,11 @@ class Schedule < ApplicationRecord
       last_schedule = chef.schedules.where(is_rescheduled: false, is_free: false).where('start_time <= ?', schedule.start_time.round).where.not(id: schedule.id).sort{|a, b| a.start_time <=> b.start_time}.last
       last_ahead_cook_schedule = schedule.last_ahead_cook if schedule.cook.ahead_cooks.present?
 
-      is_startable = check_startable(last_schedule, last_ahead_cook_schedule)
+      is_startable = check_startable(schedule, last_schedule, last_ahead_cook_schedule)
 
-      if schedule.is_free || is_startable && schedule.ordered_meal.customer.is_visited?(time)
+      if is_startable && schedule.ordered_meal.customer.is_visited?(time)
         schedule.update(actual_start_time: time.round)
-        if schedule.cook.permutation == 1
+        if !schedule.ordered_meal.is_started
           schedule.ordered_meal.update(is_started: true)
         end
       end
@@ -89,71 +96,70 @@ class Schedule < ApplicationRecord
   end
 
   def self.rescheduling(time, necessity_reschedule_for_visit_time, necessity_reschedule_for_cook_time, necessity_reschedule_for_ordered_meals)
+    ordered_meal_ids, exclude_schedule_ids, replaced_ordered_meal_ids = nil, nil, nil
+
+    if necessity_reschedule_for_visit_time || necessity_reschedule_for_cook_time || necessity_reschedule_for_ordered_meals
+      ordered_meal_ids, exclude_schedule_ids, started_schedule_ids = set_reschedule_ordered_meals(time, necessity_reschedule_for_visit_time, necessity_reschedule_for_cook_time, necessity_reschedule_for_ordered_meals)
+    end
+
+    staging_reschedule(ordered_meal_ids, exclude_schedule_ids, started_schedule_ids)
+
+    backward_scheduling(time, true, ordered_meal_ids, exclude_schedule_ids)
+  end
+
+  def self.set_reschedule_ordered_meals(time, necessity_reschedule_for_visit_time, necessity_reschedule_for_cook_time, necessity_reschedule_for_ordered_meals)
+    ordered_meal_ids = []
+    exclude_schedule_ids = []
+    started_schedule_ids =[]
 
     if necessity_reschedule_for_cook_time
-      started_ordered_meal_ids = OrderedMeal.where(is_rescheduled: false, is_started: true, actual_served_time: nil).pluck(:id)
-      include_schedule_ids = Schedule.where(is_rescheduled: false, ordered_meal_id: [started_ordered_meal_ids], actual_start_time: nil).pluck(:id)
+      schedules = Schedule.where(is_rescheduled: false, actual_start_time: nil)
+      ordered_meal_ids.concat schedules.pluck(:ordered_meal_id).uniq
 
-      replace_schedules = Schedule.where(is_rescheduled: false, ordered_meal_id: [started_ordered_meal_ids]).where.not(actual_start_time: nil)
-      replace_schedules.each do |schedule|
-        new_schedule_params = schedule.attributes.reject{|key, value| key == "id" || key == "created_at" || key == "updated_at" || key == "is_rescheduled"}
-        new_schedule_params.merge!({reschedule_time: time.round, is_rescheduled: false})
-        Schedule.create!(new_schedule_params)
-        schedule.update(is_rescheduled: true)
-      end
-
-      ordered_meal_ids = OrderedMeal.where(is_rescheduled: false, is_started: false)
-
-    elsif necessity_reschedule_for_ordered_meals || necessity_reschedule_for_visit_time
-      margin_time = 0
-      recent_orderd_meal_ids = []
-      recent_schedules = Schedule.where(is_rescheduled: false, start_time: time..(time + margin_time * 60)).includes(:cook) if margin_time != 0
-
-      if recent_schedules.present?
-        recent_schedules.each do |schedule|
-          if schedule.cook.permutation == 1
-            recent_orderd_meal_ids << schedule.ordered_meal_id
-          end
-        end
-      end
-
-      replace_orderd_meals = OrderedMeal.where(id: [recent_orderd_meal_ids]).or(OrderedMeal.where(is_started: true, actual_served_time: nil, is_rescheduled: true)).sort{|a, b| b.id <=> a.id }
-      replace_orderd_meals.each do |replace_ordered_meal|
-        ordered_meal = OrderedMeal.find_by(customer_id: replace_ordered_meal.customer_id, meal_id: replace_ordered_meal.meal_id, is_rescheduled: false)
-        if ordered_meal.schedules.blank?
-          replace_ordered_meal.schedules.where(is_rescheduled: false).each do |schedule|
-            new_schedule_params = schedule.attributes.reject{|key, value| key == "id" || key == "created_at" || key == "updated_at" || key == "ordered_meal_id" || key == "is_rescheduled"}
-            new_schedule_params.merge!({ordered_meal_id: ordered_meal.id, reschedule_time: time.round, is_rescheduled: false})
-            Schedule.create!(new_schedule_params)
-            schedule.update(is_rescheduled: true) 
-          end
-        end
-        if recent_orderd_meal_ids.include?(replace_ordered_meal.id)
-          recent_orderd_meal_ids << ordered_meal.id
-        end
-      end
-      ordered_meal_ids = OrderedMeal.where(is_started: false).pluck(:id) - recent_orderd_meal_ids
-      include_schedule_ids = []
+      exclude_schedules = Schedule.where(is_rescheduled: false, ordered_meal_id:  ordered_meal_ids).where.not(actual_start_time: nil)
+      exclude_schedule_ids.concat exclude_schedules.pluck(:id)
     end
-
-    backward_scheduling(time, true, ordered_meal_ids, include_schedule_ids)
-  end
-
-  def self.staging_reschedule(ordered_meal_ids, *include_schedule_ids)
-    schedules = Schedule.where(ordered_meal_id: [ordered_meal_ids], is_rescheduled: false).or(where(id: [include_schedule_ids]))
-    schedules.each do |schedule|
-      unless schedule.is_rescheduled
-        schedule.update(is_rescheduled: true)
-        removed_time = schedule.chef.work_time - (schedule.end_time - schedule.start_time).round
-        schedule.chef.update(work_time: removed_time)
-      end
-    end
-  end
-
-  def self.backward_scheduling(time, is_rescheduling, ordered_meal_ids, *include_schedule_ids)
     
-    staging_reschedule(ordered_meal_ids, include_schedule_ids)
-   
+    if necessity_reschedule_for_visit_time
+      ordered_meal_ids.concat OrderedMeal.where(is_rescheduled: false, is_started: false).pluck(:id)
+      schedules = Schedule.where(is_rescheduled: false, ordered_meal_id: ordered_meal_ids)
+
+      visit_customer_ids = Customer.where(actual_visit_time: time.round).pluck(:id)
+    end
+
+    if necessity_reschedule_for_ordered_meals
+      ordered_meal_ids.concat OrderedMeal.where(is_rescheduled: false, is_started: false).pluck(:id)
+      schedules = Schedule.where(is_rescheduled: false, ordered_meal_id: ordered_meal_ids)
+
+      started_orderd_meals = OrderedMeal.where(is_rescheduled: false, is_started: true, actual_served_time: nil)
+      started_orderd_meals.each do |started_ordered_meal|
+        replaced_ordered_meal = OrderedMeal.where(customer_id: started_ordered_meal.customer_id, meal_id: started_ordered_meal.meal_id, is_rescheduled: true).last
+        replaced_ordered_meal.schedules.where(is_rescheduled: false).each do |replaced_schedule|
+          new_schedule_params = replaced_schedule.attributes.reject{|key, value| key == "id" || key == "created_at" || key == "updated_at" || key == "ordered_meal_id"}
+          new_schedule_params.merge!({ordered_meal_id: started_ordered_meal.id, reschedule_time: time.round})
+          started_schedule = Schedule.new(new_schedule_params)
+          started_schedule.save!
+          replaced_schedule.update!(is_rescheduled: true)
+          started_schedule_ids << started_schedule.id
+        end
+        
+      end
+    end
+
+    return ordered_meal_ids.compact.uniq, exclude_schedule_ids.compact.uniq, started_schedule_ids.compact.uniq
+  end
+
+  def self.staging_reschedule(ordered_meal_ids, exclude_schedule_ids, started_schedule_ids)
+    rescheduled_schedules = Schedule.where(is_rescheduled: false, actual_start_time: nil).where.not(id: started_schedule_ids)
+
+    rescheduled_schedules.each do |schedule|
+      schedule.update(is_rescheduled: true)
+      removed_time = schedule.chef.work_time - (schedule.end_time - schedule.start_time).round
+      schedule.chef.update(work_time: removed_time)
+    end
+  end
+
+  def self.backward_scheduling(time, is_rescheduling, ordered_meal_ids, *exclude_schedule_ids)
     customers = Customer.all
     staging_cooks = []
     ordered_meals = OrderedMeal.where(id: [ordered_meal_ids], is_rescheduled: false)
@@ -296,6 +302,11 @@ class Schedule < ApplicationRecord
     if !schedule.is_free && schedule_index.present? && schedule_index != 0
       last_schedule = Schedule.find(chef_schedule[schedule.chef_id - 1][schedule_index - 1])
       limit_times << last_schedule.end_time.round
+    elsif !schedule.is_free && schedule_index.present? && schedule_index == 0
+      last_schedule = Schedule.where(is_rescheduled: false, is_free: false, chef_id: schedule.chef_id).where.not(actual_start_time: nil).sort{|a, b| a.end_time <=> b.end_time}.last
+      if last_schedule.present?
+        limit_times << last_schedule.end_time.round
+      end
     end
 
     if schedule.cook.ahead_cooks.present?
