@@ -27,7 +27,7 @@ class Customer < ApplicationRecord
   end
 
   def self.create_samples
-    customer_number = 2
+    customer_number = 3
     velocity_range = 0.8..1.2
     open_time = Time.mktime(2020, 1, 1, 17, 0,0,6)
     reserve_timing = [0, 15, 30, 45, 60]
@@ -42,7 +42,7 @@ class Customer < ApplicationRecord
   end
 
   def create_ordered_meals(start_time)
-    first_interval = 10
+    first_interval = 15
     meals = Meal.all
     next_serve_time = start_time + first_interval * 60
     meals.each do |meal|
