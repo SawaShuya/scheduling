@@ -12,11 +12,14 @@ class SchedulesController < ApplicationController
     end_time = (Schedule.maximum(:end_time) + 600).round
     i = 0
     while time <= end_time && i < 500 do
+      if i % 25 == 0
+        p i
+      end
       time = time.round
       necessity_reschedule_for_visit_time = Customer.check_visit(time)
       necessity_reschedule_for_cook_time = Schedule.every_process(time)
       necessity_reschedule_for_ordered_meals = OrderedMeal.check_pace(time)
-      necessity_reschedule_for_cook_time = false
+      # necessity_reschedule_for_cook_time = false
       # necessity_reschedule_for_ordered_meals = false
       if necessity_reschedule_for_cook_time || necessity_reschedule_for_ordered_meals || necessity_reschedule_for_visit_time
         Schedule.rescheduling(time, necessity_reschedule_for_visit_time, necessity_reschedule_for_cook_time, necessity_reschedule_for_ordered_meals)
@@ -71,11 +74,13 @@ class SchedulesController < ApplicationController
   end
 
   def repetition
-    repetition_count = 1
+    repetition_count = 5
 
     for i in 1..repetition_count do
       reset_all
+      p "start #{i}"
       active
+      p "finish #{i}"
     end
   end
 

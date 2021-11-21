@@ -7,6 +7,6 @@ class ProcessTime < ApplicationRecord
     if self.first.present?
       self.destroy_all
     end
-    self.create(now: Schedule.all.minimum(:start_time))
+    self.create(now: (Schedule.all.minimum(:start_time) - 360))
   end
 end
