@@ -1,39 +1,17 @@
-class Hoge
-  def full_name
-    puts "sawa shuya"
-  end
-
-  private
-  def age
-    puts "24"
-  end
-
-  protected
-  def hight
-    puts "186"
+class Fuga
+  def display
+    "fuga hello"
   end
 end
 
-class Fuga < Hoge
-  def name
-    puts "shuya"
+class Hoge < Fuga
+  def display
+    "hoge hello"
   end
 
-  def name_and_address
-    name
-    address
-  end
-
-  def name_and_address
-    hight
-    age
-  end
-
-  private
-  def address
-    puts "saitama"
+  def self.message
+    p "message :" + display
   end
 end
 
-fuga = Fuga.new
-puts fuga.name, fuga.name_and_address, fuga.full_name
+Hoge.message

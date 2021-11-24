@@ -22,7 +22,8 @@ class Customer < ApplicationRecord
 
   def self.set_actual_visit_time(reserve_time)
     range = -5..5
-    actual_visit_time = (reserve_time + rand(range) * 60).round
+    # actual_visit_time = (reserve_time + rand(range) * 60).round
+    actual_visit_time = (reserve_time).round
     return actual_visit_time
   end
 
