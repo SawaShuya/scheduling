@@ -221,6 +221,7 @@ class Schedule < ApplicationRecord
         new_schedule_params.merge!({start_time: max_limit_time.round, end_time: (schedule.end_time + (max_limit_time - schedule.start_time)).round, reschedule_time: time.round, is_rescheduled: false})
         new_schedule = Schedule.new(new_schedule_params)
         new_schedule.save!
+        schedule.update(is_rescheduled: true)
         started_schedule_ids << new_schedule.id
 
         next_staging_schedules = set_next_staging_schedules(chef_schedules, schedule)
@@ -251,6 +252,7 @@ class Schedule < ApplicationRecord
         new_schedule_params.merge!({ordered_meal_id: replaced_ordered_meal.id, reschedule_time: time.round})
         started_schedule = Schedule.new(new_schedule_params)
         started_schedule.save!
+        schedule.update!(is_rescheduled: true)
       end
     end
   end
