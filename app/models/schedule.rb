@@ -374,7 +374,7 @@ class Schedule < ApplicationRecord
     chefs = Chef.all
     chefs.each do |chef|
       # chef_schedule << chef.schedules.where(is_rescheduled: false, ordered_meal_id: [ordered_meal_ids]).sort{|a, b| [a.start_time, - a.id] <=> [b.start_time, - b.id]}.pluck(:id)
-      chef_schedule << chef.schedules.where(is_rescheduled: false).sort{|a, b| [a.end_time, a.id] <=> [b.end_time, b.id]}.pluck(:id)
+      chef_schedule << chef.schedules.where(is_rescheduled: false).sort{|a, b| [a.start_time, a.id] <=> [b.start_time, b.id]}.pluck(:id)
     end
 
     while staging_schedule.length != 0 do
